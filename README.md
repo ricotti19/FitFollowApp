@@ -5,6 +5,8 @@ FitFollow is a comprehensive fitness tracking and social accountability mobile a
 
 ## 📋 Project Structure
 
+3-tier Client-Server architecture with a dedicated Computer Vision microservice
+
 ```text
 FitFollowApp/
 ├── client/                  # Vite React UI (Tabs: Today, Workouts, Body, Friends, Dashboard)
