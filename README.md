@@ -21,6 +21,10 @@ FITFOLLOW/
 │       └── app.js           # Express server entry & API routes
 └── server/                  # Python 3.12 + Flask + MediaPipe (CV moderation pipeline)
     ├── dataset/             # not_workout/ (0) & workout_verified/ (1)
+        ├── relevance/
+            ├── workout/
+            ├── not_workout/
+            
     ├── models/              # workout_classifier.pth
     ├── prepare_data.py      # Dataset preprocessing & feature extraction
     ├── train.py             # Classifier model training script
