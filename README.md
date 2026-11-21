@@ -25,4 +25,4 @@ FITFOLLOW/
     ├── prepare_data.py      # Dataset preprocessing & feature extraction
     ├── train.py             # Classifier model training script
     └── app.py               # Flask inference API
-```[cite: 30]
+```
