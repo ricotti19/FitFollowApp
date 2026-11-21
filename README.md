@@ -16,6 +16,8 @@ FITFOLLOW/
 ├── express-server/          # Node + Express + MongoDB (Routes for FR-1 to FR-32 + Privacy Filter)
 │   └── src/
 │       ├── middleware/      # auth.js (JWT + isVisibleTo privacy enforcement)
+│       ├── scripts/
+│       ├── test/
 │       └── app.js           # Express server entry & API routes
 └── server/                  # Python 3.12 + Flask + MediaPipe (CV moderation pipeline)
     ├── dataset/             # not_workout/ (0) & workout_verified/ (1)
