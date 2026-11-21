@@ -43,3 +43,6 @@ FitFollow is a comprehensive fitness tracking and social accountability mobile a
     ├── tasks.py
     └── train.py             # Classifier model training script
 ```
+
+<img width="3414" height="1738" alt="image" src="https://github.com/user-attachments/assets/12c78c53-5312-41c8-99ef-94c44a966fce" />
+
