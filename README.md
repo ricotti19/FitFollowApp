@@ -5,28 +5,41 @@ FitFollow is a comprehensive fitness tracking and social accountability mobile a
 
 ## 📋 Project Structure
 
-```text
-FITFOLLOW/
+```textFitFollowApp/
 ├── client/                  # Vite React UI (4 tabs: Today, Workouts, Body, Friends)
-│   └── src/
-│       ├── lib/             # api.js, format.js, image.js
-│       ├── pages/           # TodayTab.jsx, WorkoutsTab.jsx, BodyTab.jsx, FriendsTab.jsx
-│       ├── App.jsx          # Main application state & navigation
-│       └── index.css        # Global theme tokens & responsive styles
+│   ├── src/
+│   │   ├── lib/             # api.js, format.js, image.js
+│   │   ├── pages/           # BodyTab.jsx, FriendsTab.jsx, TodayTab.jsx, WorkoutsTab.jsx
+│   │   ├── App.jsx          # Main application state & navigation
+│   │   ├── index.css        # Global theme tokens & responsive styles
+│   │   └── main.jsx         # React entry point
+│   ├── index.html
+│   ├── package-lock.json
+│   └── package.json
 ├── express-server/          # Node + Express + MongoDB (Routes for FR-1 to FR-32 + Privacy Filter)
-│   └── src/
-│       ├── middleware/      # auth.js (JWT + isVisibleTo privacy enforcement)
-│       ├── scripts/
-│       ├── test/
-│       └── app.js           # Express server entry & API routes
+│   ├── scripts/
+│   │   ├── makeMod.js
+│   │   └── seed.js
+│   ├── src/
+│   │   ├── middleware/      # auth.js (JWT + isVisibleTo privacy enforcement)
+│   │   └── app.js           # Express server entry & API routes
+│   └── test/
+│       └── integration/
+│           └── api.test.js
 └── server/                  # Python 3.12 + Flask + MediaPipe (CV moderation pipeline)
-    ├── dataset/             # not_workout/ (0) & workout_verified/ (1)
-        ├── relevance/
-            ├── workout/
-            ├── not_workout/
-            
+    ├── dataset/
+    │   └── relevance/
+    │       ├── workout/
+    │       └── not_workout/
     ├── models/              # workout_classifier.pth
+    ├── app.py               # Flask inference API
+    ├── clip_scorer.py
+    ├── features.py
+    ├── model.py
+    ├── pose.py
     ├── prepare_data.py      # Dataset preprocessing & feature extraction
-    ├── train.py             # Classifier model training script
-    └── app.py               # Flask inference API
+    ├── scoring.py
+    ├── synthetic.py
+    ├── tasks.py
+    └── train.py             # Classifier model training script
 ```
