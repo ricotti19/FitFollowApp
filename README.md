@@ -51,4 +51,4 @@ FitFollowApp/
 
 ```
 
-<img width="3414" height="1738" alt="image" src="https://github.com/user-attachments/assets/12c78c53-5312-41c8-99ef-94c44a966fce" />
+<img width="1023" height="530" alt="image" src="https://github.com/user-attachments/assets/d37d52c5-eb71-4822-a4f7-cd60f11344ef" />
