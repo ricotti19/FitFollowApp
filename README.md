@@ -51,4 +51,6 @@ FitFollowApp/
 
 ```
 
+*Testing framework*: Jest
+
 <img width="1023" height="530" alt="image" src="https://github.com/user-attachments/assets/d37d52c5-eb71-4822-a4f7-cd60f11344ef" />
