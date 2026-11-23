@@ -9,12 +9,13 @@ FitFollow is a comprehensive fitness tracking and social accountability applicat
 
 ```text
 FitFollowApp/
-├── client/                  # Vite React UI (Tabs: Today, Workouts, Body, Friends, Dashboard)
+├── client/                  # Vite React UI
 │   ├── public/
-│   │   └── banners/         # fitness.png, fitness2.png, fitness3.png, fitness4.png
+│   │   └── banners/         # banner-1.jpg, banner-2.jpg, banner-3.jpg, banner-4.jpg, dumbbell.png, fitness.png, fitness2.png, fitness3.png, fitness4.png
 │   ├── src/
-│   │   ├── lib/             # api.js, format.js, image.js
-│   │   ├── pages/           # BodyTab.jsx, Dashboard.css, Dashboard.js(x), FriendsTab.jsx, TodayTab.jsx, WorkoutsTab.jsx
+│   │   ├── components/      # Avatar.jsx
+│   │   ├── lib/             # api.js, format.js, image.js, plan.js
+│   │   ├── pages/           # BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx
 │   │   ├── App.jsx          # Main application state & navigation
 │   │   ├── index.css        # Global theme tokens & responsive styles
 │   │   └── main.jsx         # React entry point
@@ -22,32 +23,48 @@ FitFollowApp/
 │   ├── package-lock.json
 │   ├── package.json
 │   └── vite.config.js
-├── express-server/          # Node + Express + MongoDB (Routes for FR-1 to FR-32 + Privacy Filter)
+├── express-server/          # Node + Express + MongoDB
 │   ├── scripts/
 │   │   ├── makeMod.js
-│   │   └── seed.js
+│   │   ├── seed.js
+│   │   └── seedPeople.js
 │   ├── src/
-│   │   ├── middleware/      # auth.js (JWT + isVisibleTo privacy enforcement)
-│   │   └── server.js        # Express server entry & API routes
+│   │   ├── express-server/src/ 
+│   │   │   ├── moderation.js
+│   │   │   ├── demoPeople.js
+│   │   │   ├── moderation.js
+│   │   │   ├── plan.js
+│   │   │   ├── server.js
+│   │   │   └── visibility.js
+│   │   └── middleware/      # (auth, etc.)
 │   ├── test/
-│   │   └── integration/
-│   │       └── api.test.js
-│   ├── .env
+│   │   ├── integration/
+│   │   │   └── api.test.js
+│   │   └── unit/
+│   │       ├── visibility.test.js
+│   │       ├── db_constraints.test.js
+│   │       └── moderation.test.js
 │   ├── package-lock.json
-│   └── package.json
-└── server/                  # Python 3.12 + Flask + MediaPipe (CV moderation pipeline)
-    ├── .venv/
-    ├── models/              # pose_landmarker_lite.task, workout_classifier.pth
-    ├── app.py               # Flask inference API
-    ├── clip_scorer.py
-    ├── features.py
-    ├── model.py
-    ├── pose.py
-    ├── prepare_data.py      # Dataset preprocessing & feature extraction
-    ├── scoring.py
-    ├── synthetic.py
-    ├── tasks.py
-    └── train.py             # Classifier model training script
+│   ├── package.json
+│   └── seedPeople.js
+├── server/                  # Python 3.12 + Flask + MediaPipe
+│   ├── .venv/
+│   ├── models/
+│   ├── app.py
+│   ├── clip_scorer.py
+│   ├── features.py
+│   ├── model.py
+│   ├── pose.py
+│   ├── prepare_data.py
+│   ├── scoring.py
+│   ├── synthetic.py
+│   ├── tasks.py
+│   └── train.py
+├── .gitignore
+├── README.md
+├── db_test_cases.md
+├── train.py
+└── ui_test_cases.md
 
 ```
 
