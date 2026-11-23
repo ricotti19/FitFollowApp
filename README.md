@@ -29,24 +29,20 @@ FitFollowApp/
 │   │   ├── seed.js
 │   │   └── seedPeople.js
 │   ├── src/
-│   │   ├── express-server/src/ 
-│   │   │   ├── moderation.js
-│   │   │   ├── demoPeople.js
-│   │   │   ├── moderation.js
-│   │   │   ├── plan.js
-│   │   │   ├── server.js
-│   │   │   └── visibility.js
-│   │   └── middleware/      # (auth, etc.)
+│   │   ├── demoPeople.js
+│   │   ├── moderation.js
+│   │   ├── plan.js
+│   │   ├── server.js
+│   │   └── visibility.js
 │   ├── test/
 │   │   ├── integration/
-│   │   │   └── api.test.js
+│   │   │   ├── api.test.js
+│   │   │   └── db_constraints.test.js
 │   │   └── unit/
-│   │       ├── visibility.test.js
-│   │       ├── db_constraints.test.js
-│   │       └── moderation.test.js
+│   │       ├── moderation.test.js
+│   │       └── visibility.test.js
 │   ├── package-lock.json
-│   ├── package.json
-│   └── seedPeople.js
+│   └── package.json
 ├── server/                  # Python 3.12 + Flask + MediaPipe
 │   ├── .venv/
 │   ├── models/
@@ -63,9 +59,7 @@ FitFollowApp/
 ├── .gitignore
 ├── README.md
 ├── db_test_cases.md
-├── train.py
 └── ui_test_cases.md
-
 ```
 
 ## Testing
