@@ -1,0 +1,59 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+!.env.grading
+
+# Local edit backups (may contain .env copies)
+.opencode-backups/
+
+# Operating System & IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs & Local Databases
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Machine Learning & Media Uploads
+*.pt
+*.pth
+*.task
+*.ckpt
+*.onnx
+*.h5
+*.pkl
+*.npz
+*.npy
+data/
+dataset/
+datasets/
+uploads/
+checkpoints/
+runs/
+
+# Build Output
+build/
+dist/
+out/
+coverage/
