@@ -1,10 +1,10 @@
 /**
  * moderation.test.js
- * Edge-case tests for caption moderation (Ram's moderation.js).
+ * Edge-case tests for caption moderation (Melissa's work).
  *
  * Run with: npx jest moderation.test.js
  *
- * ASSUMED INTERFACE (Ram: change this part if yours is different)
+ * ASSUMED INTERFACE:
  *   moderateCaption(text) -> { allowed: boolean, reason: string }
  *
  *   reason is one of:
