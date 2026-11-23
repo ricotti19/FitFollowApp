@@ -1,5 +1,6 @@
 /**
  * moderation.js
+ * This file is Melissa's work
  * Caption moderation for FitFollow posts and stories.
  * Tested by test/moderation.test.js (run: npx jest moderation.test.js)
  *
