@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<!-- saved from url=(0047)file:///C:/Users/caram/Downloads/FitFollow.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FitFollow</title>
+<link href="./FitFollow2_files/css2" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#E9EEF1;--panel:#fff;--ink:#14202B;--mute:#5C6B78;--line:#CFD8DE;--acc:#2F5BFF;--accink:#fff;--pr:#E8512F;--ok:#1E8E5A}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171D;--panel:#19232B;--ink:#E8EEF2;--mute:#8FA0AD;--line:#2B3946;--acc:#6C8CFF;--accink:#0B1020;--pr:#FF7A59;--ok:#4CC38A}}
+:root[data-theme="dark"]{--bg:#10171D;--panel:#19232B;--ink:#E8EEF2;--mute:#8FA0AD;--line:#2B3946;--acc:#6C8CFF;--accink:#0B1020;--pr:#FF7A59;--ok:#4CC38A}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 Barlow,system-ui,sans-serif;max-width:640px;margin:0 auto;padding-bottom:84px}
+h1,h2,h3{font-family:'Barlow Condensed',Impact,sans-serif;font-weight:700;margin:0;letter-spacing:.2px}
+header{padding:18px 18px 6px;display:flex;justify-content:space-between;align-items:baseline}
+header h1{font-size:34px}
+header span{color:var(--mute);font-size:14px}
+main{padding:8px 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:24px;margin-bottom:10px}
+nav{position:fixed;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;display:flex;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:14px 4px;font:600 15px Barlow,sans-serif;cursor:pointer}
+nav button[aria-selected=true]{color:var(--acc);box-shadow:inset 0 3px 0 var(--acc)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.row>input,.row>select{flex:1 1 90px}
+.btn{background:var(--acc);color:var(--accink);border:0;border-radius:8px;padding:10px 16px;font:600 15px Barlow,sans-serif;cursor:pointer}
+.btn.ghost{background:none;color:var(--acc);border:1px solid var(--acc)}
+.mute{color:var(--mute);font-size:14px}
+.big{font:700 52px/1 'Barlow Condensed',sans-serif}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.macros b{font:700 22px 'Barlow Condensed',sans-serif}
+.item{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.x{background:none;border:0;color:var(--mute);cursor:pointer;font-size:18px}
+.pr{background:var(--pr);color:#fff;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:600;margin-left:6px}
+.lock{font-size:13px;color:var(--mute)}
+.friends{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}
+.friends button{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:20px;padding:8px 14px;font:600 14px Barlow,sans-serif;cursor:pointer}
+.friends button[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.chat{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:10px}
+.msg{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--bg)}
+.msg.me{align-self:flex-end;background:var(--acc);color:var(--accink)}
+.post{border-top:1px solid var(--line);padding:12px 0}
+.post:first-of-type{border-top:0}
+.post b{font-family:'Barlow Condensed',sans-serif;font-size:19px}
+svg text{fill:var(--mute);font:12px Barlow,sans-serif}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.stories{display:flex;gap:12px;overflow-x:auto;padding:6px 16px 10px}
+.stories button{flex:0 0 auto;background:none;border:0;color:var(--ink);font:500 13px Barlow,sans-serif;text-align:center;cursor:pointer;width:64px;padding:0}
+.ring{display:flex;width:60px;height:60px;border-radius:50%;border:3px solid var(--acc);padding:3px;margin-bottom:3px}
+.ring.seen{border-color:var(--line)}
+.ring i{flex:1;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font:700 22px 'Barlow Condensed',sans-serif;font-style:normal}
+.stories small{display:block;color:var(--mute);font-size:11px}
+#ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center}
+#ov.on{display:flex}
+.sv{position:relative;width:min(100%,420px);height:min(100%,760px);color:#fff;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;padding:70px 28px 40px;text-align:center;overflow:hidden}
+.sv p{font:700 34px/1.15 'Barlow Condensed',sans-serif;margin:0;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+.sp{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:12px;right:12px;display:flex;gap:4px}
+.sp i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.35)}
+.sp i.d{background:#fff}
+.sh{position:absolute;top:calc(26px + env(safe-area-inset-top,0px));left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.sh button,.sv .btn{background:rgba(0,0,0,.35);color:#fff;border:0;border-radius:8px;padding:6px 12px;font:600 14px Barlow,sans-serif;cursor:pointer}
+.sf{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:14px;right:14px;display:flex;gap:6px;align-items:center;z-index:2}.sf input{flex:1;background:rgba(0,0,0,.4);color:#fff;border-color:rgba(255,255,255,.4)}.sf button{background:rgba(0,0,0,.4);border:0;border-radius:20px;font-size:20px;padding:6px 9px;cursor:pointer}.sf button[aria-pressed=true]{background:#fff}.tz{position:absolute;top:80px;bottom:70px;width:40%;background:none;border:0;cursor:pointer}
+.cp{background:var(--panel);color:var(--ink);width:min(92%,400px);border-radius:14px;padding:16px;text-align:left}
+.cp textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px;min-height:80px}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer}
+.sw[aria-pressed=true]{border-color:var(--ink)}
+</style></head>
+<body>
+<header><h1>FitFollow</h1><span id="dt">Wednesday, Oct 7</span></header>
+<div id="st" class="stories"><button data-c="1" aria-label="Add to your story"><div class="ring seen"><i style="background:var(--acc);font-size:30px">+</i></div>Add</button><button data-s="Maya" aria-label="Maya's story"><div class="ring "><i style="background:#2F5BFF">M</i></div>Maya</button><button data-s="Jordan" aria-label="Jordan's story"><div class="ring "><i style="background:#E8512F">J</i></div>Jordan</button><button data-s="Sam" aria-label="Sam's story"><div class="ring "><i style="background:#1E8E5A">S</i></div>Sam</button><button data-s="Priya" aria-label="Priya's story"><div class="ring "><i style="background:#1E8E5A">P</i></div>Priya<small>Public</small></button><button data-s="Marcus" aria-label="Marcus's story"><div class="ring "><i style="background:#7A3FF2">M</i></div>Marcus<small>Public</small></button><button data-s="Elena" aria-label="Elena's story"><div class="ring "><i style="background:#14202B">E</i></div>Elena<small>Public</small></button><button data-s="Dev" aria-label="Dev's story"><div class="ring "><i style="background:#2F5BFF">D</i></div>Dev<small>Public</small></button><button data-s="Chloe" aria-label="Chloe's story"><div class="ring "><i style="background:#E8512F">C</i></div>Chloe<small>Public</small></button><button data-s="Noor" aria-label="Noor's story"><div class="ring "><i style="background:#1E8E5A">N</i></div>Noor<small>Public</small></button></div>
+<main id="v"><div class="card"><h2>Find friends</h2><input id="fq" placeholder="Search by name or @username" aria-label="Search people" style="width:100%"><div id="fres"><p class="mute">Type a name to find people to train with.</p></div></div>
+<div class="friends" role="group" aria-label="Friends"><button data-f="Maya" aria-pressed="true">Maya</button><button data-f="Jordan" aria-pressed="false">Jordan</button><button data-f="Sam" aria-pressed="false">Sam</button></div>
+<div class="card"><h2>Chat with Maya</h2><div class="chat" id="chat"><p class="mute">Say hi and plan your next session.</p></div>
+<div class="row"><input id="mt" placeholder="Message Maya" aria-label="Message"><button class="btn" id="send">Send</button></div></div>
+<div class="card"><h2>Share progress</h2><div class="row"><input id="pt" placeholder="PR, weigh-in, or a win"><input id="pf" type="file" accept="image/*" aria-label="Progress photo"><select id="ps"><option value="1">Share with friends</option><option value="0">Keep private</option></select><button class="btn" id="post">Post</button></div>
+<div class="post"><b>Jordan</b> <span class="lock">Shared · 2026-10-07</span><div>5k in 24:10, new best.</div></div><div class="post"><b>Maya</b> <span class="lock">Shared · 2026-10-07</span><div>Finished week 4 of my strength block. Squat up 10 lb.</div></div></div></main>
+<div id="ov" role="dialog" aria-modal="true"></div>
+<nav role="tablist" id="nav"><button role="tab" aria-selected="false" data-t="Today">Today</button><button role="tab" aria-selected="false" data-t="Workouts">Workouts</button><button role="tab" aria-selected="false" data-t="Body">Body</button><button role="tab" aria-selected="true" data-t="Friends">Friends</button></nav>
+<script>
+const FOODS=[["Egg (large)",72,6,0,5],["Oatmeal, 1 cup",154,6,27,3],["Chicken breast, 100g",165,31,0,4],["White rice, 1 cup",205,4,45,0],["Banana",105,1,27,0],["Greek yogurt, 170g",100,17,6,0],["Salmon, 100g",208,20,0,13],["Avocado, half",120,1,6,11],["Whole wheat bread, slice",80,4,14,1],["Peanut butter, 2 tbsp",190,7,7,16],["Broccoli, 1 cup",55,4,11,1],["Whey protein, 1 scoop",120,24,3,1],["Apple",95,0,25,0],["Sweet potato",112,2,26,0],["Almonds, 28g",164,6,6,14],["Pasta, 1 cup",220,8,43,1]];
+const FR=[{n:"Maya",r:["Nice! Gym at 6 tomorrow?","Yes! Keep it going 💪","Proud of you. Leg day Friday?"]},{n:"Jordan",r:["Let's gooo","I hit a new bench PR too","Rest day tomorrow, you earned it"]},{n:"Sam",r:["Same time next week?","Great work!","Send me your meal plan"]}];
+const DIR=[["Maya","@maya.lifts"],["Jordan","@jordanruns"],["Sam","@sam_moves"],["Priya","@priya.fit"],["Marcus","@marcus_m"],["Elena","@elena.trail"],["Dev","@dev_squats"],["Chloe","@chloe.yoga"],["Tyler","@tyler_hiit"],["Noor","@noor.cycles"],["Ben","@benbench"],["Ana","@ana_swims"]];
+const R=["Nice! Keep it going 💪","Let's gooo","Great work!","Gym tomorrow?","Proud of you","Rest day tomorrow, you earned it"];
+const SS={Maya:["Leg day done 🦵","Squat PR: 225 lb"],Jordan:["5k before work","Recovery walk 🌅"],Sam:["Meal prep Sunday 🥗"],Priya:["Morning yoga flow","10k steps by noon"],Marcus:["Bench day. Three plates is close.","Protein shakes today: 3 😅"],Elena:["Trail run, 8 miles","Sunrise summit"],Dev:["Deadlift form check","Back at it"],Chloe:["Pilates class","Desk-job stretch routine"],Noor:["40 mile ride","New bike, new legs"]};
+const PUB=["Priya","Marcus","Elena","Dev","Chloe","Noor"],BG=["#2F5BFF","#E8512F","#1E8E5A","#7A3FF2","#14202B"];
+const MEAS=["Chest","Waist","Hips","Arm","Thigh"];
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let pimg="";let S={react:{},stories:[],seen:{},pub:true,friends:["Maya","Jordan","Sam"],pending:[],steps:{},stepGoal:10000,goal:2200,foods:[],workouts:[],body:[],posts:[],chats:{}};
+try{const r=localStorage.getItem("ff1");if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem("ff1",JSON.stringify(S))}catch(e){}};
+if(!S.posts.length)S.posts=[{who:"Maya",txt:"Finished week 4 of my strength block. Squat up 10 lb.",d:today(),shared:true},{who:"Jordan",txt:"5k in 24:10, new best.",d:today(),shared:true}];
+S.stories=S.stories.filter(x=>Date.now()-x.ts<864e5);
+let tab="Today",friend="Maya";
+const tabs=["Today","Workouts","Body","Friends"];
+function nav(){document.getElementById("nav").innerHTML=tabs.map(t=>`<button role="tab" aria-selected="${t==tab}" data-t="${t}">${t}</button>`).join("");}
+document.getElementById("nav").onclick=e=>{const t=e.target.dataset.t;if(t){tab=t;draw()}};
+document.getElementById("dt").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+function draw(){nav();stBar();const v=document.getElementById("v");v.innerHTML={Today:vToday,Workouts:vWork,Body:vBody,Friends:vFriends}[tab]();window.scrollTo(0,0);showRes()}
+const tf=()=>S.foods.filter(f=>f.d==today());
+function vToday(){const f=tf(),k=f.reduce((a,x)=>a+x.k,0),p=f.reduce((a,x)=>a+x.p,0),c=f.reduce((a,x)=>a+x.c,0),fa=f.reduce((a,x)=>a+x.f,0);
+const st=S.steps[today()]||0,wk=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return S.steps[d.toISOString().slice(0,10)]||0}),wm=Math.max(S.stepGoal,...wk);
+return `<div class="card"><h2>Steps</h2><div class="big">${st.toLocaleString()}<span class="mute"> / ${S.stepGoal.toLocaleString()}</span></div><div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,st/S.stepGoal*100)}%"></i></div>
+<svg viewBox="0 0 140 40" width="100%" height="48" role="img" aria-label="Steps, last 7 days" preserveAspectRatio="none">${wk.map((v,i)=>`<rect x="${i*20+3}" y="${40-v/wm*38}" width="14" height="${v/wm*38}" rx="2" fill="var(--acc)" opacity="${i==6?1:.45}"/>`).join("")}</svg>
+<div class="row"><input id="sv" type="number" placeholder="Today's steps"><button class="btn" id="adds">Save steps</button></div>
+<details><summary class="mute">Connect a watch</summary><p class="mute">Automatic sync with Apple Watch, Fitbit, Garmin, Samsung and Pixel Watch needs the phone app version of FitFollow. Browsers can't read step data from watches. Until then, enter your steps here.</p></details></div>
+<div class="card"><h2>Calories</h2><div class="big">${k}<span class="mute"> / ${S.goal} kcal</span></div>
+<div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,k/S.goal*100)}%"></i></div>
+<p class="mute">${Math.max(0,S.goal-k)} kcal left. <label>Goal <input id="goal" type="number" value="${S.goal}" style="width:90px"></label></p>
+<div class="macros"><div><b>${p}g</b><div class="mute">Protein</div></div><div><b>${c}g</b><div class="mute">Carbs</div></div><div><b>${fa}g</b><div class="mute">Fat</div></div></div></div>
+<div class="card"><h2>Log food</h2><div class="row"><select id="fs">${FOODS.map((x,i)=>`<option value="${i}">${x[0]} (${x[1]} kcal)</option>`).join("")}</select><button class="btn" id="addf">Add</button></div>
+<details><summary class="mute">Add your own food</summary><div class="row" style="margin-top:8px"><input id="cn" placeholder="Name"><input id="ck" type="number" placeholder="kcal"><input id="cp" type="number" placeholder="Protein g"><input id="cc" type="number" placeholder="Carbs g"><input id="cf" type="number" placeholder="Fat g"><button class="btn ghost" id="addc">Add</button></div></details>
+${f.length?f.map((x,i)=>`<div class="item"><span>${esc(x.n)}<div class="mute">${x.p}p ${x.c}c ${x.f}f</div></span><span>${x.k} kcal <button class="x" data-df="${S.foods.indexOf(x)}" aria-label="Remove">×</button></span></div>`).join(""):`<p class="mute">Nothing logged yet. Pick a food above to start today.</p>`}</div>`}
+function vWork(){const w=S.workouts.slice().reverse();
+return `<div class="card"><h2>Log a set</h2><div class="row"><input id="wn" placeholder="Exercise (e.g. Bench press)" list="ex"><datalist id="ex">${[...new Set(S.workouts.map(x=>x.n))].map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
+<div class="row"><input id="ww" type="number" placeholder="Weight (lb)"><input id="wr" type="number" placeholder="Reps"><input id="ws" type="number" placeholder="Sets" value="3"><button class="btn" id="addw">Save</button></div></div>
+<div class="card"><h2>History</h2>${w.length?w.map(x=>`<div class="item"><span>${esc(x.n)}${x.pr?'<span class="pr">PR</span>':''}<div class="mute">${x.d}</div></span><span>${x.s}×${x.r} @ ${x.w} lb <button class="x" data-dw="${S.workouts.indexOf(x)}" aria-label="Remove">×</button></span></div>`).join(""):`<p class="mute">No sets yet. Log your first one and it becomes your starting record.</p>`}</div>`}
+function vBody(){const b=S.body,l=b[b.length-1];let ch="";
+const ws=b.filter(x=>x.w);if(ws.length>1){const a=ws.map(x=>x.w),mn=Math.min(...a)-1,mx=Math.max(...a)+1,pts=a.map((y,i)=>`${30+i*(280/(a.length-1))},${100-(y-mn)/(mx-mn)*85}`).join(" ");
+ch=`<svg viewBox="0 0 320 120" width="100%" role="img" aria-label="Weight trend"><polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="3"/><text x="0" y="14">${mx.toFixed(0)}</text><text x="0" y="102">${mn.toFixed(0)}</text></svg>`}
+return `<div class="card"><h2>Body log</h2><div class="row"><input id="bw" type="number" step=".1" placeholder="Weight (lb)">${MEAS.map(m=>`<input id="m${m}" type="number" step=".1" placeholder="${m} (in)">`).join("")}</div><button class="btn" id="addb">Save entry</button><p class="mute">Everything except the date is optional.</p></div>
+<div class="card"><h2>Progress</h2>${l?`<div class="big">${l.w||"—"}<span class="mute"> lb</span></div>`:""}${ch||'<p class="mute">Log two weigh-ins to see your trend.</p>'}
+${b.slice().reverse().map(x=>`<div class="item"><span>${x.d}</span><span class="mute">${x.w?x.w+" lb ":""}${MEAS.filter(m=>x[m]).map(m=>m+" "+x[m]).join(", ")}</span></div>`).join("")}</div>`}
+function vFriends(){const ch=S.chats[friend]||[];
+if(!S.friends.includes(friend))friend=S.friends[0]||"";
+return `<div class="card"><h2>Find friends</h2><input id="fq" placeholder="Search by name or @username" aria-label="Search people" style="width:100%"><div id="fres"></div></div>
+<div class="friends" role="group" aria-label="Friends">${S.friends.map(n=>`<button data-f="${n}" aria-pressed="${n==friend}">${n}</button>`).join("")}</div>
+<div class="card"><h2>Chat with ${friend}</h2><div class="chat" id="chat">${ch.length?ch.map(m=>`<div class="msg ${m.me?'me':''}">${esc(m.t)}</div>`).join(""):'<p class="mute">Say hi and plan your next session.</p>'}</div>
+<div class="row"><input id="mt" placeholder="Message ${friend}" aria-label="Message"><button class="btn" id="send">Send</button></div></div>
+<div class="card"><h2>Share progress</h2><div class="row"><input id="pt" placeholder="PR, weigh-in, or a win"><input id="pf" type="file" accept="image/*" aria-label="Progress photo"><select id="ps"><option value="1">Share with friends</option><option value="0">Keep private</option></select><button class="btn" id="post">Post</button></div>
+${S.posts.slice().reverse().filter(p=>p.who||p.shared!==undefined).map((p,i)=>`<div class="post"><b>${esc(p.who||"You")}</b> <span class="lock">${p.shared?"Shared":"🔒 Only you"} · ${p.d}</span><div>${esc(p.txt)}</div>${p.img?`<img src="${p.img}" alt="Progress photo" style="width:100%;border-radius:10px;margin-top:6px">`:""}</div>`).join("")}</div>`}
+document.getElementById("v").addEventListener("click",e=>{const t=e.target,id=t.id,$=i=>document.getElementById(i);
+if(id=="addf"){const x=FOODS[$("fs").value];S.foods.push({d:today(),n:x[0],k:x[1],p:x[2],c:x[3],f:x[4]})}
+else if(id=="addc"){const n=$("cn").value.trim(),k=+$("ck").value;if(!n||!k)return;S.foods.push({d:today(),n,k,p:+$("cp").value||0,c:+$("cc").value||0,f:+$("cf").value||0})}
+else if(t.dataset.df){S.foods.splice(+t.dataset.df,1)}
+else if(id=="addw"){const n=$("wn").value.trim(),w=+$("ww").value,r=+$("wr").value,s=+$("ws").value||1;if(!n||!w||!r)return;const prev=S.workouts.filter(x=>x.n.toLowerCase()==n.toLowerCase());S.workouts.push({d:today(),n,w,r,s,pr:prev.length>0&&w>Math.max(...prev.map(x=>x.w))})}
+else if(t.dataset.dw){S.workouts.splice(+t.dataset.dw,1)}
+else if(id=="addb"){const e={d:today()};if($("bw").value)e.w=+$("bw").value;MEAS.forEach(m=>{if($("m"+m).value)e[m]=+$("m"+m).value});if(Object.keys(e).length<2)return;S.body.push(e)}
+else if(t.dataset.f){friend=t.dataset.f}
+else if(id=="adds"){const v=+$("sv").value;if(!v)return;S.steps[today()]=v}
+else if(t.dataset.add){const n=t.dataset.add;S.pending.push(n);save();showRes();setTimeout(()=>accept(n),1500);return}
+else if(id=="send"){const v=$("mt").value.trim();if(!v)return;(S.chats[friend]=S.chats[friend]||[]).push({me:1,t:v});const n=friend;save();draw();
+setTimeout(()=>{(S.chats[n]=S.chats[n]||[]).push({t:R[Math.floor(Math.random()*R.length)]});save();if(tab=="Friends"&&friend==n){draw();const c=document.getElementById("chat");c.scrollTop=c.scrollHeight}},1200);return}
+else if(id=="post"){const v=$("pt").value.trim();if(!v)return;S.posts.push({who:"",txt:v,d:today(),shared:$("ps").value=="1",img:pimg});pimg=""}
+else return;save();draw()});
+document.getElementById("v").addEventListener("change",e=>{if(e.target.id=="pf"&&e.target.files[0])shrink(e.target.files[0],d=>pimg=d);if(e.target.id=="goal"){S.goal=+e.target.value||2200;save();draw()}});
+function accept(n){if(!S.pending.includes(n))return;S.pending=S.pending.filter(x=>x!=n);S.friends.push(n);save();if(tab=="Friends")draw()}
+function showRes(){const q=document.getElementById("fq"),o=document.getElementById("fres");if(!q||!o)return;const v=q.value.trim().toLowerCase().replace(/^@/,"");
+if(!v){o.innerHTML='<p class="mute">Type a name to find people to train with.</p>';return}
+const r=DIR.filter(d=>d[0].toLowerCase().includes(v)||d[1].toLowerCase().includes(v));
+o.innerHTML=r.length?r.map(d=>`<div class="item"><span>${d[0]}<div class="mute">${d[1]}${PUB.includes(d[0])?" · Public account":""}</div></span>${S.friends.includes(d[0])?'<span class="mute">Friends</span>':S.pending.includes(d[0])?'<span class="mute">Requested</span>':`<button class="btn ghost" data-add="${d[0]}">Add friend</button>`}</div>`).join(""):'<p class="mute">No one matches that. Check the spelling or try their @username.</p>'}
+const $e=i=>document.getElementById(i);
+const ago=ts=>{const h=Math.floor((Date.now()-ts)/36e5);return h<1?"now":h+"h ago"};
+function groups(){const g=[];if(S.stories.length)g.push({n:"You",it:S.stories});
+S.friends.filter(n=>SS[n]).forEach((n,i)=>g.push({n,it:SS[n].map((t,j)=>({t,bg:BG[(i+j)%5],ts:Date.now()-(j+i+1)*36e5*2}))}));
+PUB.filter(n=>!S.friends.includes(n)).forEach((n,i)=>g.push({n,pub:1,it:SS[n].map((t,j)=>({t,bg:BG[(i+j+2)%5],ts:Date.now()-(j+i+2)*36e5*3}))}));return g}
+function stBar(){$e("st").innerHTML=`<button data-c="1" aria-label="Add to your story"><div class="ring seen"><i style="background:var(--acc);font-size:30px">+</i></div>Add</button>`+groups().map(g=>`<button data-s="${g.n}" aria-label="${g.n}'s story"><div class="ring ${S.seen[g.n]?'seen':''}"><i style="background:${g.it[0].bg}">${g.n[0]}</i></div>${g.n}${g.pub?'<small>Public</small>':''}</button>`).join("")}
+let cur=null,ix=0,tm;
+function show(){clearTimeout(tm);const it=cur.it[ix],o=$e("ov");S.seen[cur.n]=1;save();
+o.innerHTML=`<div class="sv" style="background-color:${it.bg};${it.img?`background-image:url(${it.img})`:''}"><div class="sp">${cur.it.map((_,i)=>`<i class="${i<=ix?'d':''}"></i>`).join("")}</div><div class="sh"><b>${cur.n}${cur.pub?' · Public':''} · ${ago(it.ts)}</b><span>${cur.n=="You"?'<button data-sd="1">Delete</button> ':''}<button data-x="1">Close</button></span></div>${it.t?`<p>${esc(it.t)}</p>`:''}${cur.n!="You"?`<div class="sf">${["🔥","💪","👏","❤️"].map(e=>`<button data-r="${e}" aria-pressed="${S.react[cur.n+ix]==e}" aria-label="React ${e}">${e}</button>`).join("")}<input id="rin" placeholder="Reply to ${cur.n}" aria-label="Reply"><button data-rp="1" style="font:600 14px Barlow,sans-serif;color:#fff">Send</button></div>`:""}<button class="tz" style="left:0" data-p="1" aria-label="Previous"></button><button class="tz" style="right:0" data-n="1" aria-label="Next"></button></div>`;
+o.className="on";tm=setTimeout(next,4500);const ri=$e("rin");if(ri)ri.onfocus=()=>clearTimeout(tm)}
+function next(){if(ix<cur.it.length-1){ix++;show()}else{const g=groups(),i=g.findIndex(x=>x.n==cur.n);g[i+1]?open(g[i+1].n):close()}}
+function close(){clearTimeout(tm);$e("ov").className="";$e("ov").innerHTML="";stBar()}
+function open(n){cur=groups().find(g=>g.n==n);ix=0;if(cur)show()}
+function compose(){let bg=BG[0],img="";const o=$e("ov");const r=()=>{o.innerHTML=`<div class="cp"><h2>New story</h2><textarea id="stx" placeholder="Share a workout, meal, or win" aria-label="Story text"></textarea><div class="row" style="margin-top:8px">${BG.map(c=>`<button class="sw" data-bg="${c}" style="background:${c}" aria-pressed="${c==bg}" aria-label="Color ${c}"></button>`).join("")}</div><div class="row"><input id="sf" type="file" accept="image/*"></div><div class="row"><select id="sa"><option value="f">Friends only</option><option value="p">Public</option></select><button class="btn ghost" data-x="1">Cancel</button><button class="btn" data-post="1">Post story</button></div><p class="mute">Stories disappear after 24 hours.</p></div>`};
+r();o.className="on";o.onchange=e=>{if(e.target.id=="sf"&&e.target.files[0])shrink(e.target.files[0],d=>img=d)};
+o.oncompose=null;o._c=()=>({bg,img,t:$e("stx").value.trim(),a:$e("sa").value});o._bg=c=>{const t=$e("stx").value,a=$e("sa").value;bg=c;r();$e("stx").value=t;$e("sa").value=a}}
+function shrink(f,cb){const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,600/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=i.width*k;c.height=i.height*k;c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.7))};i.src=r.result};r.readAsDataURL(f)}
+$e("st").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.c)compose();else if(b.dataset.s)open(b.dataset.s)});
+$e("ov").addEventListener("click",e=>{const b=e.target.closest("button"),o=$e("ov");if(!b){return}const d=b.dataset;
+if(d.x)close();else if(d.n)next();else if(d.p){if(ix>0){ix--;show()}else show()}
+else if(d.r){S.react[cur.n+ix]=d.r;save();show()}
+else if(d.rp){const v=$e("rin").value.trim();if(!v)return;(S.chats[cur.n]=S.chats[cur.n]||[]).push({me:1,t:"Replied to your story: "+v});save();show()}
+else if(d.bg)o._bg(d.bg);
+else if(d.post){const c=o._c();if(!c.t&&!c.img)return;S.stories.push({t:c.t,bg:c.bg,img:c.img,aud:c.a,ts:Date.now()});delete S.seen.You;save();close();open("You")}
+else if(d.sd){S.stories.splice(ix,1);save();S.stories.length?(ix=Math.min(ix,S.stories.length-1),cur=groups()[0],show()):close()}});
+document.addEventListener("keydown",e=>{if(e.key=="Escape"&&$e("ov").className)close()});
+document.getElementById("v").addEventListener("input",e=>{if(e.target.id=="fq")showRes()});
+S.pending.slice().forEach(accept);
+document.getElementById("v").addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.id=="mt")document.getElementById("send").click()});
+draw();showRes();
+</script>
+</body></html>
