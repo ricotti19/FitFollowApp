@@ -55,4 +55,11 @@ FitFollowApp/
 Testing framework : Jest
 
 
-<img width="1023" height="530" alt="image" src="https://github.com/user-attachments/assets/d37d52c5-eb71-4822-a4f7-cd60f11344ef" />
+## UI (latest):
+<img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
+
+<img width="3420" height="1758" alt="image" src="https://github.com/user-attachments/assets/1781340e-028c-4716-babf-c6e69bf5b925" />
+
+<img width="3420" height="1760" alt="image" src="https://github.com/user-attachments/assets/fc9be425-5663-4652-9762-bf6ea3a3ffae" />
+
+
