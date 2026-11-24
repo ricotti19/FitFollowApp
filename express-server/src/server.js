@@ -10,7 +10,7 @@ import { AUDIENCES, pairKey, feedFilter, canViewPost, escapeRegExp, isValidAvata
 import bcrypt from 'bcryptjs'
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-import { moderateCaption, MESSAGES } from './moderation.js';
+import { moderateCaption, moderateBio, moderateComment, MESSAGES, BIO_MESSAGES } from './moderation.js';
 
 const app = express();
 app.use(cors());
@@ -38,6 +38,7 @@ const User = mongoose.model('User', new mongoose.Schema({
   email: String,
   username: String,
   displayName: String,
+  bio: { type: String, default: '' },
   password: String,
   phone: String,
   calorieGoal: { type: Number, default: 2200 },
@@ -74,6 +75,12 @@ const Post = mongoose.model('Post', new mongoose.Schema({
   photoStatus: { type: String, default: 'none' },
   photo: { data: Buffer, contentType: String },
   authorPublic: { type: Boolean, default: false },
+    comments: [{
+    authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    author: { username: String },
+    text: String,
+    createdAt: { type: Date, default: Date.now },
+  }],
   createdAt: { type: Date, default: Date.now }
 }));
 
@@ -87,6 +94,18 @@ const Friendship = mongoose.model('Friendship', new mongoose.Schema({
   requester: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['PENDING', 'FRIENDS'], default: 'PENDING' },
 }, { timestamps: true }));
+
+// Direct messages between two friends. `pairKey` is the same key the Friendship uses,
+// so one query returns the whole conversation no matter who sent what.
+const messageSchema = new mongoose.Schema({
+  pairKey: { type: String, required: true },
+  senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  recipientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  text: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+messageSchema.index({ pairKey: 1, createdAt: -1 });
+const Message = mongoose.model('Message', messageSchema);
 
 // Older posts were saved with only author.username; give them an authorId once the DB is up.
 mongoose.connection.once('open', async () => {
@@ -301,13 +320,14 @@ const toPublicUser = (u) => ({
   id: String(u._id), 
   username: u.username, 
   displayName: u.displayName, 
+  bio: u.bio || '',
   email: u.email, 
   calorieGoal: u.calorieGoal || 2200,
   avatarUrl: u.avatarUrl || null,
   isPublic: Boolean(u.isPublic),
   defaultAudience: u.defaultAudience || 'FRIENDS',
 });
-const PROFILE_FIELDS = 'username displayName email calorieGoal avatarUrl isPublic defaultAudience';
+const PROFILE_FIELDS = 'username displayName bio email calorieGoal avatarUrl isPublic defaultAudience';
 const signToken = (u) => jwt.sign({ sub: String(u._id) }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES || '7d' });
 
 async function requireAuth(req, res, next) {
@@ -364,6 +384,10 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (!USERNAME_RE.test(username)) {
       return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or underscores.' });
+    }
+
+    if (!moderateComment(username).allowed || !moderateComment(displayName).allowed) {
+      return res.status(400).json({ error: 'Please choose an appropriate username and display name.' });
     }
 
     const passErr = passwordProblem(password);
@@ -574,13 +598,13 @@ app.post('/api/auth/reset', async (req, res) => {
 
 app.get('/api/me', requireAuth, (req, res) => res.json({ user: toPublicUser(req.user) }));
 
-
 app.patch('/api/me', requireAuth, async (req, res) => {
   const b = req.body || {};
   const set = {};
   if (b.displayName !== undefined) {
     const name = String(b.displayName).trim();
     if (name.length < 1 || name.length > 40) return res.status(400).json({ error: 'Display name must be 1-40 characters.' });
+    if (!moderateComment(name).allowed) return res.status(400).json({ error: 'Please choose an appropriate display name.' });
     set.displayName = name;
   }
   if (b.isPublic !== undefined) set.isPublic = b.isPublic === true;
@@ -589,11 +613,25 @@ app.patch('/api/me', requireAuth, async (req, res) => {
     set.defaultAudience = b.defaultAudience;
   }
   if (b.avatarUrl !== undefined) {
-    if (b.avatarUrl !== null && !isValidAvatar(b.avatarUrl)) {
-      return res.status(400).json({ error: 'That photo is too large or not a JPEG/PNG/WebP image.' });
+    if (b.avatarUrl !== null) {
+      if (!isValidAvatar(b.avatarUrl)) {
+        return res.status(400).json({ error: 'That photo is too large or not a JPEG/PNG/WebP image.' });
+      }
+      const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(b.avatarUrl);
+      if (m) {
+        const cv = await checkPhoto({
+          buffer: Buffer.from(m.at(2), 'base64'),
+          mimetype: m.at(1),
+          originalname: 'avatar.jpg',
+        });
+        if (cv.outcome !== 'approved') {
+          return res.status(422).json({ error: 'Please upload an appropriate fitness/workout profile photo.' });
+        }
+      }
     }
     set.avatarUrl = b.avatarUrl;
   }
+
   if (!Object.keys(set).length) return res.status(400).json({ error: 'Nothing to update.' });
 
   const publicAfter = set.isPublic ?? Boolean(req.user.isPublic);
@@ -703,17 +741,63 @@ app.post('/api/nutrition/custom', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Profile: calorie plan (age/height/weight/...) and/or displayName + bio.
+// Send any combination; only the parts you send are changed.
+//   displayName: "" resets it to your username.   bio: "" clears it.
 app.put('/api/profile', requireAuth, async (req, res) => {
-  const { age, heightIn, weightLb, sex, activity, goal } = req.body || {};
-  const bmrBase = 10 * (Number(weightLb) * 0.453592) + 6.25 * (Number(heightIn) * 2.54) - 5 * Number(age);
-  const bmr = sex === 'male' ? bmrBase + 5 : sex === 'female' ? bmrBase - 161 : bmrBase - 78;
-  const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 }[activity] || 1.375;
-  const tdee = Math.round(bmr * mult);
-  const bmi = Math.round(((Number(weightLb) / (Number(heightIn) ** 2)) * 703) * 10) / 10;
-  const usedGoal = goal === 'auto' ? (bmi >= 25 ? 'lose' : bmi < 18.5 ? 'gain' : 'maintain') : goal;
-  const calorieGoal = Math.max(1200, Math.min(5000, tdee + (usedGoal === 'lose' ? -400 : usedGoal === 'gain' ? 300 : 0)));
-  await User.findByIdAndUpdate(req.user._id, { calorieGoal });
-  res.json({ ok: true, calorieGoal, plan: { bmi, category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese', goalUsed: usedGoal } });
+  const b = req.body || {};
+  const { age, heightIn, weightLb, sex, activity, goal } = b;
+  const set = {};
+
+  // --- displayName (1-40 chars; empty falls back to the username) ---
+  if (b.displayName !== undefined) {
+    if (b.displayName !== null && typeof b.displayName !== 'string') {
+      return res.status(400).json({ error: 'Display name must be text.' });
+    }
+    const name = String(b.displayName ?? '').trim();
+    if (name.length > 40) return res.status(400).json({ error: 'Display name must be 40 characters or fewer.' });
+    
+    if (name && !moderateComment(name).allowed) return res.status(400).json({ error: 'Please choose an appropriate display name.' });
+    set.displayName = name || req.user.username;
+  }
+
+  // --- bio (empty clears it; otherwise clean, fitness-related, max 160) ---
+  if (b.bio !== undefined) {
+    const verdict = moderateBio(b.bio);
+    if (!verdict.allowed) {
+      return res.status(400).json({ error: BIO_MESSAGES[verdict.reason] || 'Use an appropriate bio.', reason: verdict.reason });
+    }
+    set.bio = typeof b.bio === 'string' ? b.bio.trim() : '';
+  }
+
+  // --- calorie plan (only when the plan inputs are sent) ---
+  const hasPlan = [age, heightIn, weightLb].every((v) => v !== undefined && v !== null && v !== '');
+  let plan;
+  let calorieGoal;
+  if (hasPlan) {
+    if (![age, heightIn, weightLb].every((v) => Number.isFinite(Number(v)) && Number(v) > 0)) {
+      return res.status(400).json({ error: 'Age, height and weight must be positive numbers.' });
+    }
+    const bmrBase = 10 * (Number(weightLb) * 0.453592) + 6.25 * (Number(heightIn) * 2.54) - 5 * Number(age);
+    const bmr = sex === 'male' ? bmrBase + 5 : sex === 'female' ? bmrBase - 161 : bmrBase - 78;
+    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 }[activity] || 1.375;
+    const tdee = Math.round(bmr * mult);
+    const bmi = Math.round(((Number(weightLb) / (Number(heightIn) ** 2)) * 703) * 10) / 10;
+    const usedGoal = goal === 'auto' ? (bmi >= 25 ? 'lose' : bmi < 18.5 ? 'gain' : 'maintain') : goal;
+    calorieGoal = Math.max(1200, Math.min(5000, tdee + (usedGoal === 'lose' ? -400 : usedGoal === 'gain' ? 300 : 0)));
+    set.calorieGoal = calorieGoal;
+    plan = { bmi, category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese', goalUsed: usedGoal };
+  }
+
+  if (!Object.keys(set).length) return res.status(400).json({ error: 'Nothing to update.' });
+
+  const u = await User.findByIdAndUpdate(req.user._id, { $set: set }, { new: true, projection: PROFILE_FIELDS }).lean();
+  res.json({
+    ok: true,
+    calorieGoal: u.calorieGoal || 2200,
+    ...(plan ? { plan } : {}),
+    user: toPublicUser(u),
+  });
 });
 
 app.delete('/api/nutrition/log/:id', requireAuth, async (req, res) => {
@@ -770,6 +854,7 @@ const stateFor = (f, meId) => (!f ? 'NONE' : f.status === 'FRIENDS' ? 'FRIENDS' 
 const brief = (u) => ({ id: String(u._id), username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl || null });
 const friendIdsOf = async (meId) => (await Friendship.find({ users: meId, status: 'FRIENDS' }, 'users').lean())
   .map((f) => f.users.find((id) => String(id) !== String(meId)));
+const areFriends = async (a, b) => Boolean(await Friendship.exists({ pairKey: pairKey(a, b), status: 'FRIENDS' }));
 
 app.get('/api/friends', requireAuth, async (req, res) => {
   const me = req.user._id;
@@ -786,19 +871,44 @@ app.get('/api/friends', requireAuth, async (req, res) => {
   res.json(out);
 });
 
+app.get('/api/friends/suggested', requireAuth, async (req, res) => {
+  const me = req.user._id;
+  const rels = await Friendship.find({ users: me }, 'users').lean();
+  const exclude = [me, ...rels.flatMap((r) => r.users)];
+  const users = await User.find(
+    { _id: { $nin: exclude }, $or: [{ isDemo: { $ne: true } }, { isPublic: true }] },
+    'username displayName avatarUrl bio isPublic isDemo'
+  ).sort({ isDemo: 1, _id: -1 }).limit(8).lean();
+  res.json({
+    users: users.map((u) => ({
+      ...brief(u),
+      ...(u.isPublic ? { bio: u.bio || '' } : {}),
+      state: 'NONE',
+    })),
+  });
+});
+
+// Searches username AND displayName (case-insensitive, partial match).
+// `bio` is only included when the person's profile is public or you're already friends.
 app.get('/api/friends/search', requireAuth, async (req, res) => {
   const q = String(req.query.q || '').trim().replace(/^@/, '');
   if (q.length < 2) return res.json({ users: [] });
   const me = req.user._id;
   const rx = new RegExp(escapeRegExp(q), 'i');
   const lower = q.toLowerCase();
-  const rank = (u) => (u.username.toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
-  const found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me } }, 'username displayName avatarUrl').limit(100).lean())
-    .sort((x, y) => rank(x) - rank(y) || x.username.localeCompare(y.username))
+  const rank = (u) => ((u.username || '').toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
+  const found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me } }, 'username displayName avatarUrl bio isPublic').limit(100).lean())
+    .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
     .slice(0, 20);
   const rels = await Friendship.find({ users: me, pairKey: { $in: found.map((u) => pairKey(me, u._id)) } }).lean();
   const byKey = new Map(rels.map((f) => [f.pairKey, f]));
-  res.json({ users: found.map((u) => ({ ...brief(u), state: stateFor(byKey.get(pairKey(me, u._id)), me) })) });
+  res.json({
+    users: found.map((u) => {
+      const state = stateFor(byKey.get(pairKey(me, u._id)), me);
+      const canSeeBio = Boolean(u.isPublic) || state === 'FRIENDS';
+      return { ...brief(u), ...(canSeeBio ? { bio: u.bio || '' } : {}), state };
+    }),
+  });
 });
 
 app.post('/api/friends/:id/send', requireAuth, async (req, res) => {
@@ -841,6 +951,70 @@ app.delete('/api/friends/:id', requireAuth, async (req, res) => {
   res.json({ state: 'NONE' });
 });
 
+// ---------------- Messages (friends only) ----------------
+const toMessageJson = (m, meId) => ({
+  id: String(m._id),
+  senderId: String(m.senderId),
+  recipientId: String(m.recipientId),
+  text: m.text,
+  createdAt: m.createdAt,
+  mine: String(m.senderId) === String(meId),
+});
+
+// Conversation with one friend, oldest first.
+//   ?limit=50 (1-100)   ?before=<ISO date> to page back to older messages
+app.get('/api/messages/:friendId', requireAuth, async (req, res) => {
+  try {
+    const me = req.user._id;
+    const { friendId } = req.params;
+    if (!mongoose.isValidObjectId(friendId)) return res.status(404).json({ error: 'User not found.' });
+    if (!(await areFriends(me, friendId))) return res.status(403).json({ error: 'You can only message your friends.' });
+
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const filter = { pairKey: pairKey(me, friendId) };
+    if (req.query.before) {
+      const before = new Date(String(req.query.before));
+      if (Number.isNaN(before.getTime())) return res.status(400).json({ error: 'Invalid "before" date.' });
+      filter.createdAt = { $lt: before };
+    }
+
+    const rows = await Message.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    res.json({ messages: rows.reverse().map((m) => toMessageJson(m, me)) });
+  } catch (err) {
+    console.error('get messages failed:', err);
+    res.status(500).json({ error: 'Could not load messages.' });
+  }
+});
+
+app.post('/api/messages/:friendId', requireAuth, async (req, res) => {
+  try {
+    const me = req.user._id;
+    const { friendId } = req.params;
+    if (!mongoose.isValidObjectId(friendId)) return res.status(404).json({ error: 'User not found.' });
+    if (!(await areFriends(me, friendId))) return res.status(403).json({ error: 'You can only message your friends.' });
+
+    if (typeof req.body?.text !== 'string') return res.status(400).json({ error: 'Message must be text.', reason: 'invalid_input' });
+    const text = req.body.text.trim();
+    if (!text) return res.status(400).json({ error: 'Write something to send.', reason: 'empty' });
+
+    const verdict = moderateComment(text);
+    if (!verdict.allowed) {
+      return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Use appropriate language.', reason: verdict.reason });
+    }
+
+    const message = await Message.create({
+      pairKey: pairKey(me, friendId),
+      senderId: me,
+      recipientId: friendId,
+      text,
+    });
+    res.status(201).json({ message: toMessageJson(message, me) });
+  } catch (err) {
+    console.error('send message failed:', err);
+    res.status(500).json({ error: 'Could not send the message.' });
+  }
+});
+
 // ---------------- Feed (privacy-filtered: Home + Discover) ----------------
 app.get('/api/feed', requireAuth, async (req, res) => {
   const me = req.user._id;
@@ -861,6 +1035,7 @@ app.get('/api/feed', requireAuth, async (req, res) => {
         author: { username: a?.username || p.author?.username, displayName: a?.displayName, avatarUrl: a?.avatarUrl || null },
         hasPhoto: p.photoStatus !== 'none',
         photoUrl: p.photoStatus !== 'none' ? `/api/feed/${p._id}/photo` : null,
+        comments: (p.comments || []).map((c) => ({ ...c, mine: String(c.authorId) === String(me) }))
       };
     }),
   });
@@ -940,7 +1115,37 @@ app.delete('/api/feed/:id', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/feed/:id/comments', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Post not found.' });
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  const isFriend = Boolean(await Friendship.exists({ pairKey: pairKey(req.user._id, post.authorId), status: 'FRIENDS' }));
+  if (!canViewPost(post, req.user._id, isFriend)) return res.status(404).json({ error: 'Post not found.' });
 
+  const text = String(req.body?.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'Write a comment first.' });
+  const verdict = moderateComment(text);
+  if (!verdict.allowed) return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Keep comments clean and fitness-related.' });
+
+  post.comments.push({ authorId: req.user._id, author: { username: req.user.username }, text });
+  await post.save();
+  const saved = post.comments[post.comments.length - 1];
+  res.status(201).json({ comment: { _id: saved._id, author: saved.author, text: saved.text, createdAt: saved.createdAt, mine: true } });
+});
+
+app.delete('/api/feed/:id/comments/:cid', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Post not found.' });
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  const c = post.comments.id(req.params.cid);
+  if (!c) return res.status(404).json({ error: 'Comment not found.' });
+  if (String(c.authorId) !== String(req.user._id) && String(post.authorId) !== String(req.user._id)) {
+    return res.status(403).json({ error: 'Not allowed.' });
+  }
+  c.deleteOne();
+  await post.save();
+  res.json({ ok: true });
+});
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () => console.log(`Express running on http://localhost:${PORT}`));

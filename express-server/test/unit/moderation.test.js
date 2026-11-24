@@ -21,9 +21,28 @@
  *   An empty caption is allowed, since a progress photo can be posted with no text.
  */
 
-const { moderateCaption } = require("../src/moderation"); // change path to wherever moderation.js lives
 
-const MAX_CAPTION_LENGTH = 500; // change if moderation.js uses a different limit
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+import { moderateCaption, moderateBio, moderateComment, MAX_CAPTION_LENGTH } from "../../src/moderation.js";
+
+const expect = (actual) => ({
+  toBe: (expected) => assert.strictEqual(actual, expected),
+  not: {
+    toBe: (expected) => assert.notStrictEqual(actual, expected),
+    toThrow: () => { assert.doesNotThrow(actual); },
+  },
+  toEqual: (expected) => assert.deepStrictEqual(actual, expected),
+  toBeLessThan: (n) => assert.ok(actual < n, `Expected ${actual} < ${n}`),
+  toHaveProperty: (prop) => assert.ok(actual != null && prop in actual, `Expected property "${prop}"`),
+});
+
+test.each = (cases) => (template, fn) => {
+  for (const row of cases) {
+    const label = template.replace(/%s/g, (_, idx) => String(row));
+    test(row.join(": "), () => fn(...row));
+  }
+};
 
 // Helpers so each test reads like a sentence
 const expectAllowed = (text) => {

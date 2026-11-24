@@ -31,6 +31,19 @@ NEGATIVE = [
     "a photo of a pet or an animal",
     "a photo of a person sitting or standing casually",
     "a photo of a product, a car or a building",
+    "a person in a bikini or swimsuit at the beach or pool",
+    "a glamour selfie or evening dress photo",
+    "lingerie or underwear mirror selfie",
+    "a person naked",
+    "a person without clothes on",
+    "a person in an explicit position",
+    "a person in a sexual position",
+    "a person in an intimate position",
+    "a person asleep",
+    "a person fighting",
+    "a person talking without exercising",
+    "a person watching TV without exercising",
+    "a person scrolling their phone without exercising"
 ]
 
 

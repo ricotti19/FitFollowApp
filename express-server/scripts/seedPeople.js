@@ -58,19 +58,32 @@ for (let page = 1; people.length < COUNT; page++) {
   if (page > 20) break; // safety net
 }
 
+const peopleWithIds = people.map((p) => ({ ...p, _id: new mongoose.Types.ObjectId() }));
 const userDocs = [];
 const postDocs = [];
-for (const p of people) {
-  const _id = new mongoose.Types.ObjectId();
+for (const p of peopleWithIds) {
   userDocs.push({
-    _id, email: `${p.username}@demo.fitfollow`, username: p.username, displayName: p.displayName, password: unusableHash,
-    role: 'user', isPublic: p.isPublic, defaultAudience: 'FRIENDS', avatarUrl: p.avatarUrl, isDemo: true, __v: 0,
+    _id: p._id, email: `${p.username}@demo.fitfollow`, username: p.username, displayName: p.displayName,
+    bio: p.bio || '', password: unusableHash, role: 'user', isPublic: p.isPublic, defaultAudience: 'FRIENDS',
+    avatarUrl: p.avatarUrl, isDemo: true, __v: 0,
   });
-  for (const post of postsFor(p, rng)) {
-    postDocs.push({ authorId: _id, author: { username: p.username }, audience: post.audience, text: post.text, cvStatus: null,
-      photoStatus: 'none', authorPublic: p.isPublic, createdAt: post.createdAt, __v: 0 });
+  for (const post of postsFor(p, rng, Date.now(), peopleWithIds)) {
+    postDocs.push({
+      _id: new mongoose.Types.ObjectId(),
+      authorId: p._id,
+      author: { username: p.username },
+      audience: post.audience,
+      text: post.text,
+      comments: (post.comments || []).map((c) => ({ _id: new mongoose.Types.ObjectId(), ...c })),
+      cvStatus: null,
+      photoStatus: 'none',
+      authorPublic: p.isPublic,
+      createdAt: post.createdAt,
+      __v: 0,
+    });
   }
 }
+
 for (let i = 0; i < userDocs.length; i += 1000) await users.insertMany(userDocs.slice(i, i + 1000), { ordered: false });
 for (let i = 0; i < postDocs.length; i += 1000) await posts.insertMany(postDocs.slice(i, i + 1000), { ordered: false });
 

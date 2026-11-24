@@ -31,6 +31,7 @@ function Person({ u }) {
       <div className="person-names">
         <div className="name">{u.displayName || u.username}</div>
         <div className="handle">@{u.username}</div>
+        {u.bio && <div className="small muted" style={{ marginTop: 2 }}>{u.bio}</div>}
       </div>
     </div>
   );
@@ -55,6 +56,14 @@ export default function FriendsTab({ user, onOpenSettings }) {
   const [cvNotice, setCvNotice] = useState('');
   const [posting, setPosting] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null); // { title, body, confirmLabel, onConfirm }
+  const [suggested, setSuggested] = useState([]);
+  const [showSuggested, setShowSuggested] = useState(true);
+  const [activeChat, setActiveChat] = useState(null); // { id, username, displayName, avatarUrl }
+  const [messages, setMessages] = useState([]);
+  const [msgText, setMsgText] = useState('');
+  const [msgErr, setMsgErr] = useState('');
+  const [commentDrafts, setCommentDrafts] = useState({}); // { [postId]: string }
+  const [commentErrs, setCommentErrs] = useState({});
 
     const loadFeed = async () => {
     try {
@@ -76,6 +85,41 @@ export default function FriendsTab({ user, onOpenSettings }) {
       console.error(e);
     }
   };
+
+  // 1. Load suggested people immediately on mount
+  useEffect(() => {
+    api.get('/friends/suggested').then((d) => setSuggested(d.users || [])).catch(() => {});
+  }, []);
+
+  // 2. Live debounced typeahead search (250ms after typing 2+ chars)
+  useEffect(() => {
+    const clean = searchQ.trim().replace(/^@/, '');
+    if (clean.length < 2) {
+      setSearchResults([]);
+      setSearched(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      api.get(`/friends/search?q=${encodeURIComponent(clean)}`)
+        .then((d) => { setSearchResults(d.users || []); setSearched(true); })
+        .catch(() => {});
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQ]);
+
+  // 3. Poll active DM thread every 3 seconds when open
+  useEffect(() => {
+    if (!activeChat) return;
+    let cancelled = false;
+    const loadChat = () =>
+      api.get(`/messages/${activeChat.id}`)
+        .then((d) => { if (!cancelled) setMessages(d.messages || []); })
+        .catch(() => {});
+    loadChat();
+    const id = setInterval(loadChat, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [activeChat]);
+
   const loadSocial = () => Promise.all([loadFeed(), loadFriends()]);
 
   useEffect(() => { setFeedLoaded(false); loadFeed(); }, [scope]);
@@ -125,6 +169,7 @@ export default function FriendsTab({ user, onOpenSettings }) {
       const res = await call();
       const state = res?.state || nextState;
       setSearchResults((rows) => rows.map((u) => (u.id === userId ? { ...u, state } : u)));
+      setSuggested((rows) => rows.map((u) => (u.id === userId ? { ...u, state } : u)));
       await loadSocial();
     } catch (err) {
       setFriendMsg(err.message);
@@ -133,6 +178,40 @@ export default function FriendsTab({ user, onOpenSettings }) {
   const sendRequest = (id) => friendAction(id, () => api.post(`/friends/${id}/send`));
   const acceptRequest = (id) => friendAction(id, () => api.post(`/friends/${id}/accept`), 'FRIENDS');
   const removeRelation = (id) => friendAction(id, () => api.del(`/friends/${id}`), 'NONE');
+
+    const sendDm = async (e) => {
+    e.preventDefault();
+    const text = msgText.trim();
+    if (!text || !activeChat) return;
+    setMsgErr('');
+    try {
+      const d = await api.post(`/messages/${activeChat.id}`, { text });
+      setMessages((prev) => [...prev, d.message]);
+      setMsgText('');
+    } catch (err) {
+      setMsgErr(err.message || 'Could not send message.');
+    }
+  };
+
+  const addComment = async (postId) => {
+    const text = (commentDrafts[postId] || '').trim();
+    if (!text) return;
+    setCommentErrs((p) => ({ ...p, [postId]: '' }));
+    try {
+      const d = await api.post(`/feed/${postId}/comments`, { text });
+      setFeed((prev) => prev.map((p) => (p._id === postId ? { ...p, comments: [...(p.comments || []), d.comment] } : p)));
+      setCommentDrafts((p) => ({ ...p, [postId]: '' }));
+    } catch (err) {
+      setCommentErrs((p) => ({ ...p, [postId]: err.message || 'Could not post comment.' }));
+    }
+  };
+
+  const deleteComment = async (postId, cid) => {
+    try {
+      await api.del(`/feed/${postId}/comments/${cid}`);
+      setFeed((prev) => prev.map((p) => (p._id === postId ? { ...p, comments: (p.comments || []).filter((c) => c._id !== cid) } : p)));
+    } catch {}
+  };
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -347,30 +426,64 @@ export default function FriendsTab({ user, onOpenSettings }) {
             ))}
           </div>
         )}
+        
+        {searchQ.trim().length < 2 && suggested.length > 0 && (
+        <>
+         <div className="row spread">
+           <span className="small muted">Suggested people</span>
+           <button
+             type="button"
+             className="btn small ghost"
+             style={{ padding: '2px 10px', fontSize: '0.78rem' }}
+             onClick={() => setShowSuggested((s) => !s)}
+           >
+             {showSuggested ? 'Hide' : `Show (${suggested.length})`}
+           </button>
+         </div>
+         {showSuggested && (
+           <div className="list">
+             {suggested.map((u) => (
+               <div key={u.id} className="item spread">
+                 <Person u={u} />
+                 {u.state === 'NONE' && <button type="button" className="btn small" onClick={() => sendRequest(u.id)}>Add</button>}
+                 {u.state === 'REQUEST_SENT' && <button type="button" className="btn small ghost" onClick={() => removeRelation(u.id)}>Requested · Cancel</button>}
+                 {u.state === 'FRIENDS' && <span className="chip accent">Friends</span>}
+               </div>
+             ))}
+           </div>
+         )}
+       </>
+     )}
+
         {friends.length > 0 && (
           <>
             <div className="small muted">Your friends</div>
             <div className="list">
               {friends.map((u) => (
-                <div key={u.id} className="item spread">
+                  <div key={u.id} className="item spread">
                   <Person u={u} />
-                  <button
-                    type="button"
-                    className="btn small ghost"
-                    onClick={() =>
-                      setConfirmModal({
-                        title: `Remove @${u.username}?`,
-                        body: 'They will no longer see your Friends-only posts.',
-                        confirmLabel: 'Remove Friend',
-                        onConfirm: () => {
-                          setConfirmModal(null);
-                          removeRelation(u.id);
-                        },
-                      })
-                    }
-                  >
-                    Remove
-                  </button>                
+                  <span className="row" style={{ gap: 6 }}>
+                    <button type="button" className="btn small dark-navy" onClick={() => { setActiveChat(u); setMsgErr(''); }}>
+                      Message
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small ghost"
+                      onClick={() =>
+                        setConfirmModal({
+                          title: `Remove @${u.username}?`,
+                          body: 'They will no longer see your Friends-only posts.',
+                          confirmLabel: 'Remove Friend',
+                          onConfirm: () => {
+                            setConfirmModal(null);
+                            removeRelation(u.id);
+                          },
+                        })
+                      }
+                    >
+                      Remove
+                    </button>
+                  </span>
                 </div>
               ))}
             </div>
@@ -411,6 +524,28 @@ export default function FriendsTab({ user, onOpenSettings }) {
             {p.photoUrl && <PostPhoto path={p.photoUrl} />}
             {p.photoStatus === 'review' && <div style={{ padding: '10px 16px 0' }}><span className="chip">Photo pending moderator review (only you can see it)</span></div>}
             {p.cvStatus && p.photoStatus !== 'review' && <div style={{ padding: '0 16px 14px' }}><span className="chip accent">{p.cvStatus}</span></div>}
+                        <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(16, 21, 68, 0.08)' }}>
+              {(p.comments || []).map((c) => (
+                <div key={c._id} className="row" style={{ justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: 6 }}>
+                  <span><strong>@{c.author?.username}</strong> {c.text}</span>
+                  {(c.mine || p.mine) && (
+                    <button type="button" className="btn small ghost" style={{ padding: '2px 6px', fontSize: '0.75rem' }} onClick={() => deleteComment(p._id, c._id)}>×</button>
+                  )}
+                </div>
+              ))}
+              <div className="row" style={{ gap: 8, marginTop: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Add a fitness comment..."
+                  value={commentDrafts[p._id] || ''}
+                  onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [p._id]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addComment(p._id))}
+                  style={{ flex: 1, padding: '6px 10px', fontSize: '0.88rem' }}
+                />
+                <button type="button" className="btn small dark-navy" onClick={() => addComment(p._id)}>Post</button>
+              </div>
+              {commentErrs[p._id] && <div className="small" style={{ color: '#b42318', marginTop: 4 }}>{commentErrs[p._id]}</div>}
+            </div>
           </article>
         ))}
       </section>
@@ -463,6 +598,47 @@ export default function FriendsTab({ user, onOpenSettings }) {
                 {confirmModal.confirmLabel}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+            {activeChat && (
+        <div
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setActiveChat(null); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(16, 21, 68, 0.55)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              width: '100%', maxWidth: 420,
+              background: '#fff7e0', color: '#101544',
+              border: '2px solid #101544', borderRadius: 20, padding: '20px 22px',
+              boxShadow: '0 18px 40px rgba(16, 21, 68, 0.25)',
+            }}
+          >
+            <div className="row spread" style={{ marginBottom: 12 }}>
+              <strong>Chat with {activeChat.displayName || activeChat.username} (@{activeChat.username})</strong>
+              <button type="button" className="btn small ghost" onClick={() => setActiveChat(null)}>Close</button>
+            </div>
+            <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+              {messages.length === 0 && <p className="small muted">No messages yet. Say hi!</p>}
+              {messages.map((m) => (
+                <div key={m.id} style={{ alignSelf: m.mine ? 'flex-end' : 'flex-start', background: m.mine ? '#101544' : '#ffffff', color: m.mine ? '#ffffff' : '#101544', padding: '8px 12px', borderRadius: 12, maxWidth: '80%', fontSize: '0.9rem' }}>
+                  {m.text}
+                </div>
+              ))}
+            </div>
+            {msgErr && <p className="small" style={{ color: '#b42318', marginBottom: 8 }}>{msgErr}</p>}
+            <form onSubmit={sendDm} className="row" style={{ gap: 8 }}>
+              <input type="text" value={msgText} onChange={(e) => setMsgText(e.target.value)} placeholder="Send a fitness message..." style={{ flex: 1 }} />
+              <button type="submit" className="btn small dark-navy">Send</button>
+            </form>
           </div>
         </div>
       )}

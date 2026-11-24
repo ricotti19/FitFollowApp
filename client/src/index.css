@@ -1,8 +1,3 @@
-/* FitFollow - themeable UI */
-/* "The Seasons" is a licensed font. Place your font files in client/public/fonts/
-   (e.g. Fontspring/TheSeasons-reg.woff2, reg.woff, bd.woff2, bd.woff, it.woff2, it.woff)
-   and update the src URLs below if your filenames differ. */
-
 @import url('https://fonts.googleapis.com/css2?family=Gloock&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 @font-face {
@@ -81,7 +76,7 @@ img { max-width: 100%; display: block; }
 .header-right {
   display: flex;
   align-items: center;
-  gap: 24px; /* <--- Increased gap here */
+  gap: 24px;  
   color: var(--text);
   font-size: 1rem;
 }
@@ -586,11 +581,25 @@ details[open] > summary::before { transform: rotate(90deg); }
 .choice.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .choice input { margin-top: 3px; }
 .choice .t { font-weight: 600; font-size: 0.9375rem; }
-.settings-back { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; align-self: flex-start; }
+.settings-back {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(20, 20, 31, 0.18);
+  border-radius: 999px;
+  padding: 8px 18px;
+  color: var(--ink-strong, #14141f);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(20, 20, 31, 0.08);
+}
+.settings-back:hover {
+  background: #ffffff;
+}
 .profile-popover-head .row { gap: 10px; }
 
 
-/* 1. Upgrade the body font to Plus Jakarta Sans & widen layout to fill desktop naturally */
 .app {
   --body-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --display-font: 'Gloock', Georgia, serif;
@@ -618,7 +627,7 @@ details[open] > summary::before { transform: rotate(90deg); }
 .app .header-right {
   display: flex !important;
   align-items: center !important;
-  gap: 32px !important; /* Widens the gap between Date, Theme Dropdown, and Profile Icon */
+  gap: 32px !important; 
 }
 
 .app .theme-picker {
@@ -632,7 +641,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   font-weight: 700 !important;
 }
 
-/* 3. Crisp, high-contrast cards with subtle border & elevated depth */
 .app .app-main {
   padding: 32px 24px 0 !important;
 }
@@ -650,7 +658,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   box-shadow: 0 20px 48px rgba(20, 20, 31, 0.08) !important;
 }
 
-/* 4. Editorial headings & hero numbers */
 .app .card-title,
 .app .card > h2,
 .app section > h2,
@@ -677,7 +684,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   color: rgba(20, 20, 31, 0.65) !important;
 }
 
-/* 5. High-contrast labels, helper text & macro readouts */
 .app label.field,
 .app .card label {
   font-size: 1.02rem !important;
@@ -705,7 +711,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   color: var(--ink-strong) !important;
 }
 
-/* 6. Crisp inputs, thicker progress bar & pill buttons */
 .app input:not([type="checkbox"]):not([type="radio"]),
 .app select:not(.theme-select),
 .app textarea {
@@ -733,7 +738,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   margin: 16px 0 12px !important;
 }
 
-/* 7. Floating pill bottom navigation bar */
 .app .tabbar {
   bottom: 18px !important;
   width: min(680px, 92vw) !important;
@@ -764,7 +768,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   color: var(--ink-strong) !important;
 }
 
-/* 4. Make Card Subheaders (Steps, Calories & Macros) 2x bigger & bold */
 .app .card-title,
 .app .card > h2,
 .app section > h2,
@@ -773,7 +776,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   font-weight: 800 !important;
 }
 
-/* 5. Make the generic kcal banner / notice text 2x bigger & bold */
 .app .notice {
   font-size: 1.25rem !important;
   font-weight: 800 !important;
@@ -781,7 +783,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   padding: 16px 20px !important;
 }
 
-/* 6. Universal Bold & 2x Scaling for Input Labels, Fields, Search, and Buttons (Excluding Food Dropdown) */
 .app label.field,
 .app .card label,
 .app input:not(.food-row input),
@@ -795,7 +796,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   font-weight: 800 !important;
 }
 
-/* Specific override to keep the 3rd screenshot external database food search dropdown text normal/unaffected */
 .app .food-row,
 .app .food-row *,
 .app .food-row .meta {
@@ -806,10 +806,8 @@ details[open] > summary::before { transform: rotate(90deg); }
 .app label[for*="gender"], 
 .app .card .stack > .muted:has(+ .row),
 .app .card .stack > div > .muted:first-child {
-  /* Targets the text above gender pills */
 }
 
-/* More specifically targeting the exact helper text string via CSS or general label styling */
 .app .card .stack > .muted {
   font-size: 1.05rem !important;
   font-weight: 800 !important;
@@ -824,7 +822,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   color: var(--ink-strong, #14141f) !important;
 }
 
-/* 2. Style the gender row text to look like a clean label like Age/Height/Weight */
 .app .card .stack > div:has(button),
 .app .card .stack > div:has(.choice),
 .app .card .stack > .muted {
@@ -838,7 +835,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   float: none !important;
 }
 
-/* ---------- Elevate "Your plan" into its own bold header card section ---------- */
 .app details.plan-section {
   background: rgba(255, 255, 255, 0.6) !important;
   border: 1.5px solid rgba(20, 20, 31, 0.12) !important;
@@ -859,14 +855,12 @@ details[open] > summary::before { transform: rotate(90deg); }
   margin-top: 0 !important;
 }
 
-/* Style the disclosure arrow to match major headers cleanly */
 .app details.plan-section > summary::before {
   font-size: 0.75em !important;
   margin-right: 10px !important;
   color: var(--accent) !important;
 }
 
-/* ---------- Scale up empty state text ---------- */
 .app .empty {
   font-size: 1.25rem !important;
   font-weight: 700 !important;
@@ -888,7 +882,6 @@ details[open] > summary::before { transform: rotate(90deg); }
   border-color: rgba(16, 21, 68, 0.35) !important;
 }
 
-/* Custom dark navy button (for "Clear Image") */
 .app .btn.dark-navy,
 .btn.dark-navy {
   background: #101544 !important;
@@ -898,4 +891,44 @@ details[open] > summary::before { transform: rotate(90deg); }
 .btn.dark-navy:hover:not(:disabled) {
   background: #1e256b !important;
   color: #ffffff !important;
+}
+
+/* ---------- Feed Posts, Authors, and Nav Bar ---------- */
+
+.app .post-text {
+  font-size: 1.25rem !important;
+  line-height: 1.55 !important;
+  color: var(--ink-strong) !important;
+  padding: 4px 16px 18px !important;
+}
+
+.app .person-names .name {
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  color: var(--ink-strong) !important;
+}
+
+.app .person-names .handle {
+  font-size: 0.98rem !important;
+  font-weight: 500 !important;
+}
+
+.app .chip {
+  font-size: 0.88rem !important;
+  padding: 5px 12px !important;
+}
+
+.app .tab svg {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.app .tab-label {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+
+.app .seg button {
+  font-size: 1.15rem !important;
+  padding: 8px 20px !important;
 }

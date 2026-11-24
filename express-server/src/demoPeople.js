@@ -45,6 +45,16 @@ export function toDemoPeople(results, { taken = new Set(), rng = makeRng(), avat
   return out;
 }
 
+const BIOS = [
+  'Chasing a 225 bench & 10k steps daily 💪',
+  'Half-marathon training + high-protein meal prep',
+  'Push/pull/legs split • consistency over perfection',
+  'Morning runner, lifter, and macro tracker',
+  'Building strength one PR at a time 🏋️',
+  'Yoga, long walks, and clean home-cooked meals',
+  '', // ~14% leave bio blank naturally
+];
+
 const TEMPLATES = [
   (n) => `New bench PR today: ${n.w} lb for ${n.r}. Slow progress is still progress.`,
   (n) => `${n.steps} steps before lunch. Walking meetings are underrated.`,
@@ -68,8 +78,45 @@ const TEMPLATES = [
   () => 'Swapped soda for sparkling water this week. Small wins.',
 ];
 
-/** 0-3 sample posts for a demo person. Private accounts can't post "public", so theirs are friends-only. */
-export function postsFor(person, rng = makeRng(), now = Date.now()) {
+const SHORT_PUMPS = [
+  () => 'legs cooked',
+  (n) => `5k in ${n.m} mins before class`,
+  (n) => `new bench pr ${n.w}!!`,
+  () => 'upper body done',
+  () => 'chicken rice broccoli again lol',
+  (n) => `hit ${n.steps} steps around campus today`,
+  () => 'rest day mobility + hydration',
+];
+
+const STORY_INTROS = [
+  (n) => `Started week ${n.wk} of my new strength block today and honestly almost skipped the gym after a long morning.`,
+  (n) => `Six months ago I could barely run a mile without stopping, and today I clocked a ${n.m}-minute 5k with gas left in the tank.`,
+  (n) => `Switched from random workouts to tracking every lift and hitting 150g of protein daily, and the difference in recovery is wild.`,
+];
+
+const STORY_MIDDLES = [
+  (n) => `Opened with ${n.w} lb squats for ${n.r} clean reps, followed by Romanian deadlifts, walking lunges, and core work. Keeping rest times strict at 90 seconds kept my heart rate up the whole session.`,
+  (n) => `Prepped four days of grilled chicken, jasmine rice, roasted broccoli, and Greek yogurt bowls so busy weeknights don't derail my calorie target.`,
+  (n) => `Logging sets and steps consistently has taken all the guesswork out of progress—even on days when energy feels average, showing up compounds fast.`,
+];
+
+const STORY_OUTROS = [
+  () => 'If you are stuck on a plateau right now, dial in sleep, protein, and progressive overload for three weeks straight—your future self will thank you.',
+  (n) => `Down ${n.lb} lb so far without cutting out foods I enjoy. Drop your favorite post-workout meal below so I can steal ideas for next week!`,
+  () => 'Accountability on here keeps me honest every single week. Onto tomorrow’s session 💪',
+];
+
+const COMMENT_POOL = [
+  'let’s go!! 🔥',
+  'solid volume on those sets 💪',
+  'consistency paying off big time',
+  'that meal prep sounds elite',
+  'huge PR, keep pushing!',
+  'needed this motivation before my workout today',
+  'form first always 🙌',
+];
+
+export function postsFor(person, rng = makeRng(), now = Date.now(), commenterPool = []) {
   const count = person.isPublic ? 1 + Math.floor(rng() * 3) : Math.floor(rng() * 3);
   const posts = [];
   for (let i = 0; i < count; i++) {
@@ -77,10 +124,42 @@ export function postsFor(person, rng = makeRng(), now = Date.now()) {
       w: 95 + Math.floor(rng() * 28) * 5, r: 3 + Math.floor(rng() * 8), steps: (4 + Math.floor(rng() * 9)) * 1000,
       wk: 2 + Math.floor(rng() * 20), m: 18 + Math.floor(rng() * 20), lb: 2 + Math.floor(rng() * 25),
     };
+    const roll = rng();
+    let text;
+    if (roll < 0.35) {
+      text = SHORT_PUMPS[Math.floor(rng() * SHORT_PUMPS.length)](n);
+    } else if (roll < 0.72) {
+      text = TEMPLATES[Math.floor(rng() * TEMPLATES.length)](n);
+    } else {
+      text = [
+        STORY_INTROS[Math.floor(rng() * STORY_INTROS.length)](n),
+        STORY_MIDDLES[Math.floor(rng() * STORY_MIDDLES.length)](n),
+        STORY_OUTROS[Math.floor(rng() * STORY_OUTROS.length)](n),
+      ].join(' ');
+    }
+
+    const createdAt = new Date(now - Math.floor(rng() * 10 * 24 * 3600 * 1000));
+    const comments = [];
+    if (commenterPool.length > 0 && rng() < 0.42) {
+      const numComments = 1 + Math.floor(rng() * 3);
+      for (let c = 0; c < numComments; c++) {
+        const commenter = commenterPool[Math.floor(rng() * commenterPool.length)];
+        if (commenter && commenter.username !== person.username) {
+          comments.push({
+            authorId: commenter._id,
+            author: { username: commenter.username },
+            text: COMMENT_POOL[Math.floor(rng() * COMMENT_POOL.length)],
+            createdAt: new Date(createdAt.getTime() + (5 + Math.floor(rng() * 180)) * 60 * 1000),
+          });
+        }
+      }
+    }
+
     posts.push({
-      text: TEMPLATES[Math.floor(rng() * TEMPLATES.length)](n),
+      text,
       audience: person.isPublic && rng() < 0.75 ? 'PUBLIC' : 'FRIENDS',
-      createdAt: new Date(now - Math.floor(rng() * 10 * 24 * 3600 * 1000)),
+      createdAt,
+      comments,
     });
   }
   return posts;
