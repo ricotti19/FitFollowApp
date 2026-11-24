@@ -7,6 +7,8 @@ FitFollow is a comprehensive fitness tracking and social accountability applicat
 
 3-tier Client-Server architecture MERN Stack (MongoDB, Express.js, React.js, Node.js) with a dedicated Computer Vision microservice
 
+Express.js serves as the lightweight backend framework that bridges the React frontend and MongoDB database on top of Node.js runtime environment, minimizing boilerplate code as much as possible for setup/connection
+
 (Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python files)
 
 ```text
@@ -17,7 +19,7 @@ FitFollowApp/
 │   ├── src/
 │   │   ├── components/      # Avatar.jsx
 │   │   ├── lib/             # api.js, format.js, image.js, plan.js
-│   │   ├── pages/           # BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx
+│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx, dialogShared.js
 │   │   ├── App.jsx          # Main application state & navigation
 │   │   ├── index.css        # Global theme tokens & responsive styles
 │   │   └── main.jsx         # React entry point
@@ -28,10 +30,10 @@ FitFollowApp/
 ├── express-server/          # Node + Express + MongoDB
 │   ├── scripts/
 │   │   ├── makeMod.js
-│   │   ├── seed.js
 │   │   └── seedPeople.js
 │   ├── src/
 │   │   ├── demoPeople.js
+│   │   ├── matching.js
 │   │   ├── moderation.js
 │   │   ├── plan.js
 │   │   ├── server.js
@@ -60,6 +62,8 @@ FitFollowApp/
 │   └── train.py
 ├── .gitignore
 ├── README.md
+├── Team14_Deliverable1.pdf      # for  reference
+├── Team14_Deliverable2.pdf      # for  reference
 ├── db_test_cases.md
 └── ui_test_cases.md
 ```
