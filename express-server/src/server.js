@@ -8,6 +8,9 @@ import twilio from 'twilio';
 import jwt from 'jsonwebtoken';
 import { AUDIENCES, pairKey, feedFilter, canViewPost, escapeRegExp, isValidAvatar } from './visibility.js';
 import bcrypt from 'bcryptjs'
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+import { moderateCaption, MESSAGES } from './moderation.js';
 
 const app = express();
 app.use(cors());
@@ -880,6 +883,10 @@ app.post('/api/feed', requireAuth, (req, res, next) => upload.single('photo')(re
 }), async (req, res) => {
   try {
     const text = String(req.body.text || '').trim();
+    const verdict = moderateCaption(text);
+    if (!verdict.allowed) {
+      return res.status(400).json({ error: MESSAGES?.[verdict.reason] || 'Use appropriate language.' });
+    }
     const audience = AUDIENCES.includes(req.body.audience) ? req.body.audience : (req.user.defaultAudience || 'FRIENDS');
     if (audience === 'PUBLIC' && !req.user.isPublic) {
       return res.status(400).json({ error: 'Switch to a public account in Profile & privacy to post publicly.' });
@@ -892,7 +899,7 @@ app.post('/api/feed', requireAuth, (req, res, next) => upload.single('photo')(re
       if (!req.file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'Only image files can be uploaded.' });
       const cv = await checkPhoto(req.file);
       if (cv.outcome === 'rejected') {
-        return res.status(422).json({ error: `This doesn't look like a workout photo (${cv.note}). Try another one.`, cvStatus: 'rejected' });
+        return res.status(422).json({ error: `Oops, that doesn't look like a workout photo:).`, cvStatus: 'rejected' });
       }
       cvStatus = cv.note;
       photoStatus = cv.outcome;

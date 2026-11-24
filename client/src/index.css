@@ -596,7 +596,7 @@ details[open] > summary::before { transform: rotate(90deg); }
   --display-font: 'Gloock', Georgia, serif;
   --ink-strong: #14141f;
   font-family: var(--body-font) !important;
-  color: var(--ink-strong) !important;
+  color: var(--ink-strong);
   max-width: 1060px !important;
   padding-bottom: 110px !important;
 }
@@ -873,9 +873,29 @@ details[open] > summary::before { transform: rotate(90deg); }
   color: var(--ink-strong) !important;
 }
 
-/* ---------- Scale up segmented switch buttons (Home / Discover) ---------- */
 .app .seg button,
 .app .seg {
   font-size: 1.1rem !important;
   font-weight: 700 !important;
+}
+
+.dashboard-stage div[role="dialog"] button.btn:not(.ghost),
+.app div[role="dialog"] button.btn:not(.ghost) {
+  color: #ffffff !important;
+}
+.app div[role="dialog"] button.btn.ghost {
+  color: #101544 !important;
+  border-color: rgba(16, 21, 68, 0.35) !important;
+}
+
+/* Custom dark navy button (for "Clear Image") */
+.app .btn.dark-navy,
+.btn.dark-navy {
+  background: #101544 !important;
+  color: #ffffff !important;
+}
+.app .btn.dark-navy:hover:not(:disabled),
+.btn.dark-navy:hover:not(:disabled) {
+  background: #1e256b !important;
+  color: #ffffff !important;
 }

@@ -14,7 +14,7 @@ export function emailProblem(value) {
 function usernameProblem(value) {
   const username = value.trim();
   if (!username) return 'Username is required.';
-  if (!USERNAME_RE.test(username)) return 'Use 3-20 letters, numbers or underscores.'; 
+  if (!USERNAME_RE.test(username)) return 'Use 3-20 letters, numbers or underscores.';
   return null;
 }
 

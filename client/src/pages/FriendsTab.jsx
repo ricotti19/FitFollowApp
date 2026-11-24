@@ -258,17 +258,19 @@ export default function FriendsTab({ user, onOpenSettings }) {
               </span>
             </label>
           ) : (
-            <div className="stack" style={{ alignItems: 'center', gap: 10 }}>
+            <div className="stack" style={{ alignItems: 'center', gap: 8 }}>
               <img
                 src={previewUrl}
                 alt="Selected progress preview"
                 style={{
-                  width: '100%',
-                  maxHeight: 260,
-                  objectFit: 'contain',
+                  width: 'auto',
+                  height: 'auto',
+                  maxWidth: '100%',
+                  maxHeight: 320,
                   borderRadius: 12,
-                  border: '1.5px solid rgba(16, 21, 68, 0.15)',
-                  background: '#fff'
+                  display: 'block',
+                  margin: '0 auto',
+                  boxShadow: '0 4px 14px rgba(16, 21, 68, 0.1)'
                 }}
               />
               <div className="row spread" style={{ width: '100%', padding: '0 4px' }}>
@@ -278,8 +280,8 @@ export default function FriendsTab({ user, onOpenSettings }) {
                 <button
                   type="button"
                   onClick={handleClearPhoto}
-                  className="btn small"
-                  style={{ background: '#101544', color: '#fedd5a' }}
+                  className="btn small dark-navy"
+                  style={{ background: '#101544', color: '#ffffff', fontWeight: 700 }}
                 >
                   Clear Image
                 </button>
@@ -400,7 +402,7 @@ export default function FriendsTab({ user, onOpenSettings }) {
                 <div className="handle">@{p.author?.username || 'user'} • {AUDIENCE_LABEL[p.audience] || p.audience}{p.createdAt ? ` • ${timeAgo(p.createdAt)}` : ''}</div>
               </div>  
               {p.mine && (
-                <button type="button" className="btn small ghost" onClick={() => handleDeletePost(p._id)}>
+                <button type="button" className="btn small dark-navy" onClick={() => handleDeletePost(p._id)}>
                   Delete
                 </button>
               )}
@@ -447,6 +449,7 @@ export default function FriendsTab({ user, onOpenSettings }) {
               <button
                 type="button"
                 className="btn small ghost"
+                style={{ color: '#101544', fontWeight: 700 }}
                 onClick={() => setConfirmModal(null)}
               >
                 Cancel
@@ -454,7 +457,7 @@ export default function FriendsTab({ user, onOpenSettings }) {
               <button
                 type="button"
                 className="btn small"
-                style={{ background: '#101544', color: '#fedd5a', fontWeight: 700 }}
+                style={{ background: '#101544', color: '#ffffff', fontWeight: 700 }}
                 onClick={confirmModal.onConfirm}
               >
                 {confirmModal.confirmLabel}
@@ -463,7 +466,6 @@ export default function FriendsTab({ user, onOpenSettings }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }

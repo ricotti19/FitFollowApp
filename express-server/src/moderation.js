@@ -1,6 +1,5 @@
 /**
  * moderation.js
- * This file is Melissa's work
  * Caption moderation for FitFollow posts and stories.
  * Tested by test/moderation.test.js (run: npx jest moderation.test.js)
  *
@@ -36,7 +35,11 @@ const result = (reason) => ({ allowed: reason === REASONS.OK, reason });
 // Word list from the bad-words package (about 900 words).
 // Matched as WHOLE words only, so "class", "assistant", "Essex", and
 // "cocktail" don't get blocked. To allow a word, add it to ALLOWED_WORDS.
+
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 let BadWords = require("bad-words");
+
 BadWords = BadWords.Filter || BadWords; // works with old and new versions of the package
 
 const ALLOWED_WORDS = []; // example: ["damn", "hell"] if we decide those are OK
@@ -225,9 +228,10 @@ function captionModeration(req, res, next) {
   return res.status(400).json({ error: MESSAGES[verdict.reason], reason: verdict.reason });
 }
 
-module.exports = {
+export {
   moderateCaption,
   captionModeration,
   REASONS,
   MAX_CAPTION_LENGTH,
+  MESSAGES,
 };
