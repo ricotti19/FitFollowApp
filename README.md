@@ -5,9 +5,9 @@ FitFollow is a comprehensive fitness tracking and social accountability applicat
 
 ## 📋 Project Structure
 
-3-tier Client-Server architecture with a dedicated Computer Vision microservice
+3-tier Client-Server architecture MERN Stack (MongoDB, Express.js, React.js, Node.js) with a dedicated Computer Vision microservice
 
-Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python-inclusive layer
+(Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python files)
 
 ```text
 FitFollowApp/
@@ -67,6 +67,11 @@ FitFollowApp/
 ## Testing
 Testing framework : Jest
 
+## Deployment
+3-Service Cloud Architecture
+  * MongoDB Atlas Cloud Database
+  * Render Web Service for Node/Express API
+  * Vercel to host Frontend
 
 ## UI (latest):
 <img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
