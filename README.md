@@ -7,6 +7,8 @@ FitFollow is a comprehensive fitness tracking and social accountability applicat
 
 3-tier Client-Server architecture with a dedicated Computer Vision microservice
 
+Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python-inclusive layer
+
 ```text
 FitFollowApp/
 ├── client/                  # Vite React UI
