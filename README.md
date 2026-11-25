@@ -1,7 +1,9 @@
 # FitFollowApp
 FitFollowApp - Implementation - SE 3354 Group Project
 
-FitFollow is a comprehensive fitness tracking and social accountability application designed to help users monitor workouts, daily steps, nutrition, and body measurements all in one centralized hub. Going beyond traditional standalone trackers, FitFollow bridges self-improvement with community by letting users search for friends, chat in real-time, share 24-hour stories, and publish progress posts with strict multi-tiered audience privacy controls.
+FitFollow is a comprehensive fitness tracking and social accountability application designed to help users monitor workouts, daily steps, nutrition, and body measurements all in one centralized hub.
+
+Unlike Instagram, which optimizes for passive scrolling and photo aesthetics, FitFollow integrates daily step/macro tracking, TDEE calorie planning, strength PR detection, and YouTube form coaching directly into a social accountability loop—so users can post text-only workout wins or logged PRs without needing a photo every time, and bridges that with community by letting users search for friends, chat in real-time, share 24-hour stories, and publish progress posts with strict multi-tiered audience privacy controls.
 
 ## 📋 Project Structure
 
