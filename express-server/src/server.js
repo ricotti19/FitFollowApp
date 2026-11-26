@@ -1387,12 +1387,14 @@ async function trimExcessPulsePosts() {
   try {
     const demoIds = await User.distinct('_id', { isDemo: true });
     if (!demoIds.length) return;
+        const realUserIds = await User.distinct('_id', { isDemo: { $ne: true } });
     while (true) {
       const stale = await Post.find(
-        { authorId: { $in: demoIds }, isSeededPhoto: { $ne: true } },
+        { authorId: { $nin: realUserIds }, isSeededPhoto: { $ne: true } },
         '_id'
-      ).sort({ createdAt: -1 }).skip(650).limit(2500).lean();
-      if (!stale.length) break;
+      ).sort({ createdAt: -1 }).skip(600).limit(2500).lean();
+
+    if (!stale.length) break;
       await Post.deleteMany({ _id: { $in: stale.map((s) => s._id) } });
     }
   } catch (e) {
