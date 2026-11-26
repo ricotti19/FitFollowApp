@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api, getToken, setToken, setUnauthorizedHandler, clearPhotoCache } from './lib/api';
 import { headerDate } from './lib/format';
 import Avatar from './components/Avatar';
+import { StoryAvatar } from './pages/FriendsPanel';
 import StoriesModal from './components/StoriesModal';
 import DmsModal from './components/DmsModal';
 import SettingsPage from './pages/SettingsPage';
@@ -136,22 +137,26 @@ export default function App() {
   const [storyFocusUser, setStoryFocusUser] = useState(null);
   const [feedJump, setFeedJump] = useState(null); // null | { scope: 'friends' | 'discover', ts: number }
   const menuRef = useRef(null);
-
   const [incomingReqs, setIncomingReqs] = useState([]);
-const [dismissedReqIds, setDismissedReqIds] = useState(() => new Set());
+  const [dismissedReqIds, setDismissedReqIds] = useState(() => new Set());
+  const [hasMyStory, setHasMyStory] = useState(false);
 
-useEffect(() => {
-  if (!user) { setIncomingReqs([]); return; }
-  let live = true;
-  const checkRequests = () => {
-    api.get('/friends')
-      .then((d) => { if (live) setIncomingReqs(d.incoming || []); })
-      .catch(() => {});
-  };
-  checkRequests();
-  const id = setInterval(checkRequests, 8000);
-  return () => { live = false; clearInterval(id); };
-}, [user]);
+  useEffect(() => {
+    if (!user) { setIncomingReqs([]); setHasMyStory(false); return; }
+    let live = true;
+    const checkRequests = () => {
+      api.get('/friends')
+        .then((d) => { if (live) setIncomingReqs(d.incoming || []); })
+        .catch(() => {});
+      api.get('/stories/mine')
+        .then((d) => { if (live) setHasMyStory((d.stories || []).length > 0); })
+        .catch(() => {});
+    };
+    checkRequests();
+    const id = setInterval(checkRequests, 8000);
+    return () => { live = false; clearInterval(id); };
+  }, [user, topModal]);
+
 
 const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
 
@@ -245,18 +250,18 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
               ))}
             </select>
           </label>
-          <div className="profile-menu" ref={menuRef}>
+                    <div className="profile-menu" ref={menuRef}>
           <button
            type="button"
            className="avatar-btn"
-           style={{ width: 46, height: 46 }}
+           style={{ width: 46, height: 46, overflow: 'visible' }}
            onClick={() => setMenuOpen((o) => !o)}
            title="Account"
            aria-label="Account menu"
            aria-haspopup="menu"
            aria-expanded={menuOpen}
          >
-           <Avatar user={user} size={46} />
+           <StoryAvatar u={user} size={46} hasStory={hasMyStory} />
          </button>
 
             {menuOpen && (
