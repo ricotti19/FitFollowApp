@@ -30,7 +30,7 @@ image = (
 
 app = modal.App("fitfollow-cv", image=image)
 
-@app.function(memory=4096, timeout=120, scaledown_window=60, max_containers=1)
+@app.function(memory=2048, timeout=120, min_containers=1, scaledown_window=300, max_containers=5)
 @modal.wsgi_app()
 def flask_app():
 
