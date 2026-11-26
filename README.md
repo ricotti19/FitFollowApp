@@ -78,6 +78,7 @@ Testing framework : Jest
   * Render Web Service for Node/Express API
   * Modal to host the serverless Python ML & CV service (4 GB RAM)
   * Vercel to host Frontend
++ Connected fitfollow-api.onrender.com to uptimerobot 
 
 ## UI (latest):
 <img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
