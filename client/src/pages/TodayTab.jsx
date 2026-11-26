@@ -157,7 +157,7 @@ function PlanEditor({ profile, onSaved }) {
   );
 }
 
-export default function TodayTab({ onOpenHelp }) {
+export default function TodayTab() {
   const day = localDay();
   const [steps, setSteps] = useState(0);
   const [stepGoal, setStepGoal] = useState(10000);
@@ -490,25 +490,15 @@ export default function TodayTab({ onOpenHelp }) {
           </form>
         </details>
         <div className="divider" />
-
-        <details className="plan-section" open={!hasPlan}>
+          
+          <details className="plan-section" open={!hasPlan}>
           <summary>Your plan{hasPlan ? `: ${fmtNum(calGoal)} kcal/day` : ' (not set yet)'}</summary>
           <PlanEditor profile={nutrition.profile} onSaved={loadData} />
         </details>
 
       </section>
-
-      {/* HELP & ACCOUNT INFO */}
-      {onOpenHelp && (
-        <section className="card row spread wrap">
-          <div>
-            <h2 className="card-title" style={{ marginBottom: 2 }}>Help &amp; account info</h2>
-            <div className="small muted">Plans, how canceling works, and copyright.</div>
-          </div>
-          <button type="button" className="btn small ghost" onClick={onOpenHelp}>Open</button>
-        </section>
-      )}
     </div>
   );
 }
+
 
