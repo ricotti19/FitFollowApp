@@ -161,7 +161,7 @@ mongoose.connection.once('open', async () => {
 });
 
 // ---- CV service (Python/Flask in ../server, started with `python app.py`) ----
-const CV_URL = (process.env.CV_SERVICE_URL || 'http://127.0.0.1:8001').replace(/\/$/, '');
+const CV_URL = (process.env.CV_SERVICE_URL || 'http://127.0.0.1:8001').trim().replace(/\/+$/, '');
 const CV_APPROVE = Number(process.env.CV_APPROVE ?? 0.6);
 const CV_REVIEW = Number(process.env.CV_REVIEW ?? 0.4);
 
@@ -169,7 +169,7 @@ const CV_REVIEW = Number(process.env.CV_REVIEW ?? 0.4);
 async function checkPhoto(file) {
   if (process.env.CV_ENABLED === 'false') return { outcome: 'approved', note: 'CV check disabled' };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  const timer = setTimeout(() => controller.abort(), 55000);
   try {
     const fd = new FormData();
     fd.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname || 'photo.jpg');
@@ -195,17 +195,22 @@ async function checkPhoto(file) {
 }
 
 async function isSupportiveText(text) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
   try {
     const r = await fetch(`${CV_URL}/classify-comment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
+      signal: controller.signal,
     });
-    if (!r.ok) return false;
+    if (!r.ok) return true; // local moderateComment() already ran; fail-open if CV service is sleeping/unavailable
     const d = await r.json();
-    return Boolean(d.allowed);
+    return d.allowed !== false;
   } catch {
-    return false;
+    return true;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -524,6 +529,37 @@ function getSms() {
 }
 
 async function sendEmailCode({ email, code }) {
+  const html = `
+    <div style="font-family:system-ui,-apple-system,sans-serif;color:#101544">
+      <p>Your FitFollow password reset code is</p>
+      <p style="font-size:30px;font-weight:700;letter-spacing:8px;margin:12px 0">${code}</p>
+      <p style="color:#555">It expires in 10 minutes. If this wasn't you, ignore this email.</p>
+    </div>`;
+
+  // Use Brevo's HTTPS API on port 443 when configured (Render free tier blocks outbound SMTP port 587)
+  const apiKey = process.env.BREVO_API_KEY || (process.env.SMTP_PASS?.startsWith('xkeysib-') ? process.env.SMTP_PASS : '');
+  if (apiKey) {
+    const rawFrom = String(process.env.MAIL_FROM || process.env.SMTP_USER || '').trim();
+    const m = /^(.*)<([^>]+)>$/.exec(rawFrom);
+    const sender = m ? { name: m[1].trim().replace(/^"|"$/g, '') || 'FitFollow', email: m[2].trim() } : { name: 'FitFollow', email: rawFrom };
+    const r = await fetch('https://brevo.com', {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender,
+        to: [{ email }],
+        subject: `Your FitFollow code: ${code}`,
+        textContent: `Your FitFollow password reset code is ${code}. It expires in 10 minutes.`,
+        htmlContent: html,
+      }),
+    });
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      throw new Error(`Brevo API ${r.status}: ${errBody}`);
+    }
+    return true;
+  }
+
   const transport = getMailer();
   if (!transport) return false;
   await transport.sendMail({
@@ -531,12 +567,7 @@ async function sendEmailCode({ email, code }) {
     to: email,
     subject: `Your FitFollow code: ${code}`,
     text: `Your FitFollow password reset code is ${code}. It expires in 10 minutes.`,
-    html: `
-      <div style="font-family:system-ui,-apple-system,sans-serif;color:#101544">
-        <p>Your FitFollow password reset code is</p>
-        <p style="font-size:30px;font-weight:700;letter-spacing:8px;margin:12px 0">${code}</p>
-        <p style="color:#555">It expires in 10 minutes. If this wasn't you, ignore this email.</p>
-      </div>`,
+    html,
   });
   return true;
 }
@@ -1733,7 +1764,6 @@ app.delete('/api/stories/:id', requireAuth, async (req, res) => {
   await Story.deleteOne({ _id: req.params.id, authorId: req.user._id });
   res.json({ ok: true });
 });
-
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () => console.log(`Express running on http://localhost:${PORT}`));
