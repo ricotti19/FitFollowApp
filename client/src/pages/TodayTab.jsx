@@ -498,7 +498,7 @@ export default function TodayTab({ onOpenHelp }) {
 
       </section>
 
-      {/* HELP & ACCOUNT INFO (frontend only) */}
+      {/* HELP & ACCOUNT INFO */}
       {onOpenHelp && (
         <section className="card row spread wrap">
           <div>
@@ -511,3 +511,4 @@ export default function TodayTab({ onOpenHelp }) {
     </div>
   );
 }
+
