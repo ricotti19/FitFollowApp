@@ -97,9 +97,9 @@ export default function DmsModal({ onClose }) {
 
         {friends.length === 0 ? (
           <div className="empty">Add a friend in the Friends tab first to start messaging!</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: 20, alignItems: 'stretch' }}>
-            <div className="stack" style={{ gap: 8, borderRight: '1.5px solid rgba(20, 20, 31, 0.1)', paddingRight: 16 }}>
+                  ) : (
+          <div className="dms-layout">
+            <div className="dms-sidebar stack">
               {displayedFriends.length === 0 ? (
                 <p className="small muted">{showArchived ? 'No archived chats.' : 'All chats archived.'}</p>
               ) : displayedFriends.map((u) => {
