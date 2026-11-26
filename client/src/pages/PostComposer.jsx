@@ -67,11 +67,18 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
           <option value="PUBLIC" disabled={!user?.isPublic}>Public</option>
         </select>
       </div>
-      <div className="small muted">
+            <div className="small muted" style={{ lineHeight: 1.45 }}>
         {AUDIENCE_HINT[audience]}
         {!user?.isPublic && (
           <> Want to post publicly?{' '}
-            <button type="button" className="settings-back" style={{ fontSize: 'inherit' }} onClick={onOpenSettings}>Switch to a public account</button>
+            <button
+              type="button"
+              className="link-btn"
+              style={{ fontSize: 'inherit', fontWeight: 700, padding: 0, textDecoration: 'underline' }}
+              onClick={onOpenSettings}
+            >
+              Switch to a public account
+            </button>
           </>
         )}
       </div>
