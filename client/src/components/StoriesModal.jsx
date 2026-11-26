@@ -52,6 +52,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
     return () => obs.disconnect();
   }, [visibleCount, feedStories.length]);
   const [openViewersId, setOpenViewersId] = useState(null);
+  const [confirmDeleteStoryId, setConfirmDeleteStoryId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replyStatus, setReplyStatus] = useState({});
   const [text, setText] = useState('');
@@ -227,7 +228,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                       👁️ Seen by {viewers.length}
                     </button>
 
-                    <button type="button" className="btn small ghost" onClick={async () => { await api.del(`/stories/${st.id}`); load(); }}>Delete</button>
+                    <button type="button" className="btn small ghost" onClick={() => setConfirmDeleteStoryId(st.id)}>Delete</button>
                     {(st.reactions || []).length > 0 && (
                       <span className="chip accent">
                         {st.reactions.map((r) => r.emoji).join(' ')} ({st.reactions.length})
@@ -317,14 +318,13 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                       <div className="handle">@{st.author?.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
                   </div>
-                  {st.mine ? (
+                                    {st.mine ? (
                     <button
                       type="button"
                       className="btn small dark-navy"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        await api.del(`/stories/${st.id}`).catch(() => {});
-                        load();
+                        setConfirmDeleteStoryId(st.id);
                       }}
                     >
                       Delete
@@ -412,10 +412,60 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
             {visibleCount < feedStories.length && (
               <div ref={storySentinelRef} style={{ height: 24 }} aria-hidden="true" />
             )}
-
           </div>
         )}
       </div>
+
+      {confirmDeleteStoryId && (
+        <div
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmDeleteStoryId(null); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(20, 20, 31, 0.52)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="stack"
+            style={{
+              width: 'min(420px, 92vw)',
+              background: '#ffffff',
+              color: '#14141f',
+              border: '2px solid rgba(20, 20, 31, 0.16)',
+              borderRadius: 24,
+              padding: '26px 28px',
+              boxShadow: '0 22px 50px rgba(20, 20, 31, 0.25)',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Delete this 24h story?</h3>
+            <p className="small muted" style={{ margin: 0 }}>
+              This will permanently remove your story from FitFollow.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmDeleteStoryId(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn small danger"
+                onClick={async () => {
+                  const targetId = confirmDeleteStoryId;
+                  setConfirmDeleteStoryId(null);
+                  setStories((prev) => prev.filter((x) => x.id !== targetId));
+                  await api.del(`/stories/${targetId}`).catch(() => {});
+                  load();
+                }}
+              >
+                Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
