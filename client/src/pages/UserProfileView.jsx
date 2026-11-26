@@ -19,9 +19,9 @@ export default function UserProfileView({
 }) {
 
   const [reportModal, setReportModal] = useState(null);
+  const [confirmBlock, setConfirmBlock] = useState(false);
   const [drafts, setDrafts] = useState({});
   const [errs, setErrs] = useState({});
-
   const pu = profileModal.data?.user;
   const state = profileModal.data?.state;
   const canView = profileModal.data?.canView;
@@ -99,15 +99,11 @@ export default function UserProfileView({
                 {state === 'FRIENDS' && (
                   <>
                     <button type="button" className="btn small" onClick={() => onOpenChat(pu)}>Message</button>
-                    <button
+                      <button
                       type="button"
                       className="btn small ghost"
                       style={{ color: '#b42318' }}
-                      onClick={async () => {
-                        if (!window.confirm(`Block @${pu.username}? You will no longer see each other's posts or messages.`)) return;
-                        await api.post(`/friends/${pu.id}/block`).catch(() => {});
-                        onBlockedOrReported(pu.id, pu.username, '');
-                      }}
+                      onClick={() => setConfirmBlock(true)}
                     >
                       Block
                     </button>
@@ -237,6 +233,31 @@ export default function UserProfileView({
             ))}
           </section>
         </>
+      )}
+
+      {confirmBlock && pu && (
+        <div className="overlay" role="dialog" aria-modal="true" onClick={() => setConfirmBlock(false)}>
+          <div className="sheet stack" style={{ maxWidth: 440, background: 'rgba(255, 255, 255, 0.97)' }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>Block @{pu.username}?</h3>
+            <p className="muted" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+              You and @{pu.username} will no longer see each other&apos;s posts, stories, or messages.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmBlock(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn small danger"
+                onClick={async () => {
+                  setConfirmBlock(false);
+                  await api.post(`/friends/${pu.id}/block`).catch(() => {});
+                  onBlockedOrReported(pu.id, pu.username, '');
+                }}
+              >
+                Yes, block
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {reportModal && (
