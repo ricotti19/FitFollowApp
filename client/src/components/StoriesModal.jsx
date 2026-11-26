@@ -275,8 +275,9 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
             {!focusUsername && (
               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Friends &amp; Public Stories ({feedStories.length})</h3>
             )}
-            {(focusUsername
-              ? (focusUsername === user?.username ? stories : feedStories.filter((s) => s.author?.username === focusUsername))
+            
+                        {(focusUsername
+              ? (focusUsername === user?.username ? stories.map((s) => ({ ...s, mine: true, author: user })) : feedStories.filter((s) => s.author?.username === focusUsername))
               : feedStories)
               .slice(0, visibleCount)
               .map((st) => (
@@ -284,7 +285,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
               <div
                 key={st.id}
                 onClick={async () => {
-                  if (!st.viewedByMe) {
+                  if (!st.mine && !st.viewedByMe) {
                     await api.post(`/stories/${st.id}/view`).catch(() => {});
                     setFeedStories((prev) => prev.map((x) => (x.id === st.id ? { ...x, viewedByMe: true } : x)));
                   }
@@ -300,25 +301,39 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                     onClick={(e) => {
                       e.stopPropagation();
                       onClose();
-                      onOpenProfile?.(st.author.username);
+                      onOpenProfile?.(st.author?.username);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.stopPropagation();
                         onClose();
-                        onOpenProfile?.(st.author.username);
+                        onOpenProfile?.(st.author?.username);
                       }
                     }}
                   >
                     <Avatar user={st.author} size={34} />
                     <div className="person-names">
-                      <div className="name" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>{st.author.displayName}</div>
-                      <div className="handle">@{st.author.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
+                      <div className="name" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>{st.author?.displayName || st.author?.username}</div>
+                      <div className="handle">@{st.author?.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
                   </div>
-                  <span className={`chip ${st.viewedByMe ? '' : 'accent'}`}>{st.viewedByMe ? 'Viewed' : 'New'}</span>
-                </div>
-                {st.text && <div style={{ padding: '0 16px 14px', fontSize: '1.1rem', fontWeight: 600 }}>{st.text}</div>}
+                  {st.mine ? (
+                    <button
+                      type="button"
+                      className="btn small dark-navy"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await api.del(`/stories/${st.id}`).catch(() => {});
+                        load();
+                      }}
+                    >
+                      Delete
+                    </button>
+                  ) : (
+                    <span className={`chip ${st.viewedByMe ? '' : 'accent'}`}>{st.viewedByMe ? 'Viewed' : 'New'}</span>
+                  )}
+                </div>            
+              {st.text && <div style={{ padding: '0 16px 14px', fontSize: '1.1rem', fontWeight: 600 }}>{st.text}</div>}
                 {st.photoUrl && <StoryPhoto path={st.photoUrl} />}
 
                                 <div
