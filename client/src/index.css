@@ -666,7 +666,11 @@ details[open] > summary::before { transform: rotate(90deg); }
   border-radius: 28px !important;
   padding: 36px 40px !important;
   box-shadow: 0 20px 48px rgba(20, 20, 31, 0.08) !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
 }
+
 
 .app .card-title,
 .app .card > h2,
@@ -1068,8 +1072,8 @@ details[open] > summary::before { transform: rotate(90deg); }
   }
 
   .app .app-header {
-    flex-wrap: nowrap !important;
-    gap: 8px !important;
+    flex-wrap: wrap !important;
+    gap: 8px 10px !important;
     padding: 12px 14px !important;
     border-radius: 0 0 18px 18px !important;
   }
