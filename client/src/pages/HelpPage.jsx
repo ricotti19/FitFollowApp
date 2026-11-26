@@ -134,7 +134,7 @@ function CancelSection({ onOpenSettings }) {
           <div>
             <div className="help-opt-title">Sign out</div>
             <div className="help-opt-desc">
-              Tap your profile photo in the top right corner, then Sign out. Your data stays saved.
+              Tap your profile photo in the top right corner, tap Sign out, then confirm. Your data stays saved.
             </div>
           </div>
         </div>
@@ -142,7 +142,8 @@ function CancelSection({ onOpenSettings }) {
           <div>
             <div className="help-opt-title">Delete your account</div>
             <div className="help-opt-desc">
-              Coming soon. This will permanently remove your account and everything you've posted.
+              Open Profile &amp; privacy, scroll to Delete Account, tap Delete Account &amp; All Data, and confirm.
+              This permanently removes your workouts, food logs, stories, posts and messages. It can't be undone.
             </div>
           </div>
         </div>
