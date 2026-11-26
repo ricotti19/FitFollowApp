@@ -139,7 +139,7 @@ export default function UserProfileView({
           {canView && userStories.length > 0 && (
             <section className="stack">
               <h2 className="card-title" style={{ paddingLeft: 4 }}>Active 24h Stories</h2>
-              {userStories.map((st) => (
+                            {userStories.map((st) => (
                 <article key={st.id} className="post" style={{ borderColor: 'rgba(225, 75, 99, 0.35)' }}>
                   <div className="post-head">
                     <StoryAvatar u={pu} size={42} hasStory />
@@ -147,6 +147,18 @@ export default function UserProfileView({
                       <div className="name">{pu.displayName} <span className="chip accent" style={{ marginLeft: 6 }}>24h Story</span></div>
                       <div className="handle">@{pu.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
+                    {state === 'SELF' && (
+                      <button
+                        type="button"
+                        className="btn small dark-navy"
+                        onClick={async () => {
+                          await api.del(`/stories/${st.id}`).catch(() => {});
+                          onReloadProfile(pu.username);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                   {st.text && <div className="post-text">{st.text}</div>}
                   {st.photoUrl && <PostPhoto path={st.photoUrl} />}
