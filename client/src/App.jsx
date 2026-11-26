@@ -210,14 +210,14 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
   // ---- MAIN APP ----
   return (
     <div className="app">      
-    <header className="app-header">
-        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setTopModal(null); setActiveTab('today'); }}>FitFollow</a>
+      <header className="app-header">
+        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setShowHelp(false); setTopModal(null); setActiveTab('today'); }}>FitFollow</a>
         <div className="header-right">
-                 <button
+                           <button
          type="button"
          className="btn small ghost"
          style={{ padding: '5px 10px', fontSize: '0.82rem' }}
-          onClick={() => { setFeedJump(null); setStoryFocusUser(null); setTopModal('stories'); }}
+          onClick={() => { setShowSettings(false); setShowHelp(false); setFeedJump(null); setStoryFocusUser(null); setTopModal('stories'); }}
        >
          + Story
        </button>
@@ -225,7 +225,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
          type="button"
          className="btn small ghost"
          style={{ padding: '5px 10px', fontSize: '0.82rem' }}
-         onClick={() => { setShowSettings(false); setTopModal('dms'); }}
+         onClick={() => { setShowSettings(false); setShowHelp(false); setTopModal('dms'); }}
 
        >
          DMs
@@ -291,18 +291,17 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
                 >
                   My Page
                 </button>
-                <button
+                  <button
                   type="button"
                   role="menuitem"
                   className="profile-popover-item"
                   onClick={() => {
                     setMenuOpen(false);
                     setShowSettings(false);
-                    setTopModal(null);
                     setShowHelp(true);
                   }}
                 >
-                  Help &amp; plans
+                  Important Info
                 </button>
 
                 <button
@@ -399,6 +398,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        className={`ff-feed-rail-btn ${activeTab === 'friends' && (!feedJump || feedJump.scope === 'friends') ? 'active' : ''}`}
        onClick={() => {
          setShowSettings(false);
+         setShowHelp(false);
          setTopModal(null);
          setActiveTab('friends');
          setFeedJump({ scope: 'friends', ts: Date.now() });
@@ -412,6 +412,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        className={`ff-feed-rail-btn ${activeTab === 'friends' && feedJump?.scope === 'discover' ? 'active' : ''}`}
        onClick={() => {
          setShowSettings(false);
+         setShowHelp(false);
          setTopModal(null);
          setActiveTab('friends');
          setFeedJump({ scope: 'discover', ts: Date.now() });
@@ -426,6 +427,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        className={`ff-feed-rail-btn ${topModal === 'stories' ? 'active' : ''}`}
        onClick={() => {
         setShowSettings(false);
+        setShowHelp(false);
         setFeedJump(null);
         setStoryFocusUser(null);
         setTopModal('stories');
@@ -435,6 +437,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        <span>Stories</span>
      </button>
    </aside>
+
     <main className="app-main stack">
      {showSettings && <SettingsPage user={user} onUserChange={setUser} onBack={() => setShowSettings(false)} />}
      {showHelp && !showSettings && (
@@ -468,7 +471,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
          }}
        />
      )}
-     {!showSettings && !showHelp && !topModal && activeTab === 'today' && <TodayTab user={user} onOpenHelp={() => setShowHelp(true)} />}
+     {!showSettings && !showHelp && !topModal && activeTab === 'today' && <TodayTab user={user} />}
      {!showSettings && !showHelp && !topModal && activeTab === 'workouts' && <WorkoutsTab />}
      {!showSettings && !showHelp && !topModal && activeTab === 'body' && <BodyTab />}
      {!showSettings && activeTab === 'friends' && (
