@@ -77,6 +77,7 @@ Testing framework : Jest
 3-Service Cloud Architecture
   * MongoDB Atlas Cloud Database
   * Render Web Service for Node/Express API
+  * Modal to host the serverless Python ML & CV service (4 GB RAM)
   * Vercel to host Frontend
 
 ## UI (latest):
