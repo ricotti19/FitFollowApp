@@ -61,12 +61,14 @@ export default function DmsModal({ onClose }) {
 
   const clearChat = async () => {
     if (!activeChat) return;
+    if (!window.confirm(`Clear all messages with @${activeChat.username}? This cannot be undone.`)) return;
     await api.del(`/messages/${activeChat.id}`).catch(() => {});
     setMessages([]);
   };
 
   const blockUser = async () => {
     if (!activeChat) return;
+    if (!window.confirm(`Block @${activeChat.username}? You will no longer see each other's posts or messages.`)) return;
     await api.post(`/friends/${activeChat.id}/block`).catch(() => {});
     const remaining = friends.filter((u) => u.id !== activeChat.id);
     setFriends(remaining);
