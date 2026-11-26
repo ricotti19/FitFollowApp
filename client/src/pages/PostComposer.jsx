@@ -123,10 +123,11 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
           <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', gap: 6 }}>
             <input
               type="file"
-              accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.webp"
+              accept="image/*"
               onChange={(e) => handleSelectFile(e.target.files?.[0])}
               style={{ display: 'none' }}
             />
+
 
             <div style={{
               width: 44, height: 44, borderRadius: '50%',
