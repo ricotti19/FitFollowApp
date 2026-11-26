@@ -21,7 +21,7 @@ FitFollowApp/
 │   ├── src/
 │   │   ├── components/      # Avatar.jsx
 │   │   ├── lib/             # api.js, format.js, image.js, plan.js
-│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsDialogs.jsx, FriendsPanel.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, PostComposer.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, UserProfileView.jsx, WorkoutsTab.jsx, dialogShared.js
+│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsDialogs.jsx, FriendsPanel.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, PostComposer.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, UserProfileView.jsx, WorkoutsTab.jsx, dialogShared.js, HelpPage.jsx
 │   │   ├── App.jsx          # Main application state & navigation
 │   │   ├── index.css        # Global theme tokens & responsive styles
 │   │   └── main.jsx         # React entry point
