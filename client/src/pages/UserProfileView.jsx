@@ -21,14 +21,14 @@ export default function UserProfileView({
   const [reportModal, setReportModal] = useState(null);
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [confirmDeletePostId, setConfirmDeletePostId] = useState(null);
+  const [deletedStoryIds, setDeletedStoryIds] = useState(() => new Set());
   const [drafts, setDrafts] = useState({});
   const [errs, setErrs] = useState({});
   const pu = profileModal.data?.user;
   const state = profileModal.data?.state;
   const canView = profileModal.data?.canView;
   const userPosts = profileModal.data?.posts || [];
-  const userStories = pu ? activeStories.filter((s) => s.author?.username === pu.username) : [];
-
+  const userStories = pu ? activeStories.filter((s) => s.author?.username === pu.username && !deletedStoryIds.has(s.id)) : [];
   const submitComment = async (postId) => {
     const text = (drafts[postId] || '').trim();
     if (!text) return;
@@ -147,18 +147,20 @@ export default function UserProfileView({
                       <div className="name">{pu.displayName} <span className="chip accent" style={{ marginLeft: 6 }}>24h Story</span></div>
                       <div className="handle">@{pu.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
-                    {state === 'SELF' && (
+                                        {state === 'SELF' && (
                       <button
                         type="button"
                         className="btn small dark-navy"
                         onClick={async () => {
                           await api.del(`/stories/${st.id}`).catch(() => {});
+                          setDeletedStoryIds((prev) => new Set([...prev, st.id]));
                           onReloadProfile(pu.username);
                         }}
                       >
                         Delete
                       </button>
                     )}
+
                   </div>
                   {st.text && <div className="post-text">{st.text}</div>}
                   {st.photoUrl && <PostPhoto path={st.photoUrl} />}
