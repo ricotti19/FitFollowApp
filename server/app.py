@@ -1,7 +1,7 @@
 """
 FitFollow CV service (Flask). The Express API calls this to decide whether an uploaded photo is a workout photo.
 
-    python app.py                
+    python app.py                 -> http://127.0.0.1:8001
 
     GET  /health                  what is loaded (pose backend, trained models, CLIP)
     POST /classify   file=<img>   {confidence, poseFound, mode, signals}      -> express-server/src/services/cv.js
@@ -164,7 +164,7 @@ def create_app(store: ModelStore | None = None, clip="default") -> Flask:
             clip_prob = clip.score(Image.fromarray(rgb))  # None if CLIP could not be loaded
 
         out = combine(found, vis, mlp_prob, clip_prob)
-        if not found and clip_prob is not None and clip_prob < 0.68:
+        if not found and clip_prob is not None and clip_prob < 0.56:
             out["confidence"] = min(float(out.get("confidence", 0.0)), 0.35)
         out["elapsedMs"] = round((time.perf_counter() - t0) * 1000)
         return jsonify(out)
