@@ -20,6 +20,7 @@ export default function UserProfileView({
 
   const [reportModal, setReportModal] = useState(null);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [confirmDeletePostId, setConfirmDeletePostId] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [errs, setErrs] = useState({});
   const pu = profileModal.data?.user;
@@ -170,24 +171,16 @@ export default function UserProfileView({
                     <div className="name">{pu.displayName}</div>
                     <div className="handle">@{pu.username} • {AUDIENCE_LABEL[post.audience] || post.audience}{post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ''}</div>
                   </div>
-                  {state === 'SELF' && (
+                   {state === 'SELF' && (
                     <button
                       type="button"
                       className="btn small dark-navy"
-                      onClick={async () => {
-                        await api.del(`/feed/${post._id}`).catch(() => {});
-                        setProfileModal((prev) => ({
-                          ...prev,
-                          data: {
-                            ...prev.data,
-                            posts: (prev.data?.posts || []).filter((x) => x._id !== post._id),
-                          },
-                        }));
-                      }}
+                      onClick={() => setConfirmDeletePostId(post._id)}
                     >
                       Delete
                     </button>
                   )}
+
                 </div>
                 {post.text && <div className="post-text">{post.text}</div>}
                 {post.photoUrl && <PostPhoto path={post.photoUrl} />}
@@ -233,6 +226,38 @@ export default function UserProfileView({
             ))}
           </section>
         </>
+      )}
+
+      {confirmDeletePostId && (
+        <div className="overlay" role="dialog" aria-modal="true" onClick={() => setConfirmDeletePostId(null)}>
+          <div className="sheet stack" style={{ maxWidth: 440, background: 'rgba(255, 255, 255, 0.97)' }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>Delete this post?</h3>
+            <p className="muted" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+              This will permanently remove your post and its comments from FitFollow.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmDeletePostId(null)}>Cancel</button>
+              <button
+                type="button"
+                className="btn small danger"
+                onClick={async () => {
+                  const targetId = confirmDeletePostId;
+                  setConfirmDeletePostId(null);
+                  await api.del(`/feed/${targetId}`).catch(() => {});
+                  setProfileModal((prev) => ({
+                    ...prev,
+                    data: {
+                      ...prev.data,
+                      posts: (prev.data?.posts || []).filter((x) => x._id !== targetId),
+                    },
+                  }));
+                }}
+              >
+                Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {confirmBlock && pu && (
