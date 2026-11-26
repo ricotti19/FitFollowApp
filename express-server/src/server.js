@@ -1385,16 +1385,25 @@ let cachedPulsePools = null;
 
 async function trimExcessPulsePosts() {
   try {
-    const demoIds = await User.distinct('_id', { isDemo: true });
-    if (!demoIds.length) return;
-        const realUserIds = await User.distinct('_id', { isDemo: { $ne: true } });
+    const realUserIds = await User.distinct('_id', { isDemo: { $ne: true } });
+    // Keep 260 isSeededPhoto templates (130 man + 130 woman) for Discover pulse; prune the other ~4,740 duplicate photo copies
+    for (const gender of ['man', 'woman']) {
+      while (true) {
+        const extraPhotos = await Post.find(
+          { isSeededPhoto: true, gender },
+          '_id'
+        ).sort({ createdAt: -1 }).skip(130).limit(2500).lean();
+        if (!extraPhotos.length) break;
+        await Post.deleteMany({ _id: { $in: extraPhotos.map((s) => s._id) } });
+      }
+    }
+    // Keep 400 newest demo/pulse posts and 100% of real user posts
     while (true) {
       const stale = await Post.find(
         { authorId: { $nin: realUserIds }, isSeededPhoto: { $ne: true } },
         '_id'
-      ).sort({ createdAt: -1 }).skip(600).limit(2500).lean();
-
-    if (!stale.length) break;
+      ).sort({ createdAt: -1 }).skip(400).limit(2500).lean();
+      if (!stale.length) break;
       await Post.deleteMany({ _id: { $in: stale.map((s) => s._id) } });
     }
   } catch (e) {
