@@ -30,9 +30,10 @@ image = (
 
 app = modal.App("fitfollow-cv", image=image)
 
-@app.function(memory=4096, timeout=120, scaledown_window=300)
+@app.function(memory=4096, timeout=120, scaledown_window=60, max_containers=1)
 @modal.wsgi_app()
 def flask_app():
+
     os.chdir("/app")
     if "/app" not in sys.path:
         sys.path.insert(0, "/app")
