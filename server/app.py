@@ -164,8 +164,11 @@ def create_app(store: ModelStore | None = None, clip="default") -> Flask:
             clip_prob = clip.score(Image.fromarray(rgb))  # None if CLIP could not be loaded
 
         out = combine(found, vis, mlp_prob, clip_prob)
-        if not found and clip_prob is not None and clip_prob < 0.56:
+        if not found and clip_prob is not None and clip_prob < 0.58:
             out["confidence"] = min(float(out.get("confidence", 0.0)), 0.35)
+        elif found and clip_prob is not None and clip_prob >= 0.32:
+            # Allow upper-body healthy eating / hydration shots where pose MLP wasn't trained on sitting postures
+            out["confidence"] = max(float(out.get("confidence", 0.0)), min(0.88, clip_prob + 0.25))
         out["elapsedMs"] = round((time.perf_counter() - t0) * 1000)
         return jsonify(out)
 
