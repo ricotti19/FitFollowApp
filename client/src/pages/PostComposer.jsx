@@ -22,9 +22,13 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   const [compressedBlob, setCompressedBlob] = useState(null);
-
+  
   const handleSelectFile = (selected) => {
-    if (!selected || !selected.type.startsWith('image/')) return;
+    if (!selected) return;
+    const isImg =
+      selected.type.startsWith('image/') ||
+      /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(selected.name || '');
+    if (!isImg) return;
     setPhoto(selected);
     setCompressedBlob(null);
     setCvNotice('');
@@ -119,10 +123,11 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
           <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', gap: 6 }}>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.webp"
               onChange={(e) => handleSelectFile(e.target.files?.[0])}
               style={{ display: 'none' }}
             />
+
             <div style={{
               width: 44, height: 44, borderRadius: '50%',
               background: 'rgba(16, 21, 68, 0.08)',
