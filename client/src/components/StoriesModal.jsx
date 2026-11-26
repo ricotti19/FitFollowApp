@@ -250,8 +250,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
       </div>
       )}
 
-      {feedStories.length > 0 && (
-
+      {(feedStories.length > 0 || (focusUsername === user?.username && stories.length > 0)) && (
           <div id="ff-stories-feed" className="stack" style={{ gap: 12, marginTop: 8 }}>
             {pendingStories.length > 0 && (
               <div style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', justifyContent: 'center' }}>
@@ -272,10 +271,13 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                 </button>
               </div>
             )}
+            
             {!focusUsername && (
               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Friends &amp; Public Stories ({feedStories.length})</h3>
             )}
-            {(focusUsername ? feedStories.filter((s) => s.author?.username === focusUsername) : feedStories)
+            {(focusUsername
+              ? (focusUsername === user?.username ? stories : feedStories.filter((s) => s.author?.username === focusUsername))
+              : feedStories)
               .slice(0, visibleCount)
               .map((st) => (
 
