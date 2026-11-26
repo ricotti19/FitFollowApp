@@ -21,31 +21,34 @@ POSITIVE = [
     "a photo of a person running or jogging outdoors",
     "a photo of a person doing yoga, stretching or pilates",
     "a photo of a person cycling, swimming or playing a sport",
-    "a photo of gym equipment such as dumbbells, barbells and machines",
-]
-NEGATIVE = [
-    "a photo of a meal or a plate of food",
-    "a meme, screenshot or text on a plain background",
-    "a landscape or a city street with no one exercising",
-    "a selfie of a person posing without exercising",
-    "a photo of a pet or an animal",
-    "a photo of a person sitting or standing casually",
-    "a photo of a product, a car or a building",
-    "a person in a bikini or swimsuit at the beach or pool",
-    "a glamour selfie or evening dress photo",
-    "lingerie or underwear mirror selfie",
-    "a person naked",
-    "a person without clothes on",
-    "a person in an explicit position",
-    "a person in a sexual position",
-    "a person in an intimate position",
-    "a person asleep",
-    "a person fighting",
-    "a person talking without exercising",
-    "a person watching TV without exercising",
-    "a person scrolling their phone without exercising"
+    "a photo of gym equipment such as dumbbells, barbells and machines",    
+    "a photo of someone eating a healthy salad bowl with greens and vegetables",
+    "a photo of grilled chicken, rice, broccoli, or healthy meal prep",
+    "a photo of a healthy fruit bowl, yogurt, or protein smoothie",
+    "a photo of someone drinking water or holding a shaker bottle"
 ]
 
+
+NEGATIVE = [
+    "a photo of a meme, screenshot, or text on a plain background",
+    "a photo of a landscape, nature scenery, or city street with no one exercising",
+    "a photo of a casual selfie of a person posing without exercising",
+    "a photo of a pet, dog, cat, or animal",
+    "a photo of an empty table, book, electronics, or inanimate object without a person",
+    "a photo of a person lounging or being lazy on a couch or bed",
+    "a photo of a person eating a burger, french fries, pizza, or fast food",
+    "a photo of donuts, cake, candy, ice cream, or sugary junk food",
+    "a photo of a person sitting, standing, or talking casually without exercising",
+    "a photo of a retail product, car, or building exterior",
+    "a photo of a person in a bikini or swimsuit at the beach or pool",
+    "a photo of a glamour selfie or formal evening dress",
+    "a photo of a person in lingerie or underwear",
+    "a photo of a naked person without clothes",
+    "a photo of a person in an explicit or sexual position",
+    "a photo of a person sleeping in bed",
+    "a photo of people fighting or in physical violence",
+    "a photo of a person watching television or scrolling a phone on a sofa",
+]
 
 class ClipScorer:
     def __init__(self, model_name: Optional[str] = None):
@@ -90,6 +93,34 @@ class ClipScorer:
         with torch.no_grad():
             probs = self._model(**inputs).logits_per_image.softmax(dim=1)[0]
         return float(probs[: len(POSITIVE)].sum())
+
+
+    def score_text(self, query: str, labels: list[str], scale: float = 25.0) -> Optional[list[float]]:
+        """Cosine-similarity softmax probabilities of `query` against `labels`."""
+        if not self.load():
+            return None
+        import torch
+
+        q_in = self._proc(text=[query], return_tensors="pt", padding=True, truncation=True)
+        c_in = self._proc(text=labels, return_tensors="pt", padding=True, truncation=True)
+        with torch.no_grad():
+            q_feat = self._model.get_text_features(**q_in)
+            q_feat = q_feat / q_feat.norm(dim=-1, keepdim=True)
+            c_feat = self._model.get_text_features(**c_in)
+            c_feat = c_feat / c_feat.norm(dim=-1, keepdim=True)
+            return (q_feat @ c_feat.T * scale).softmax(dim=-1).squeeze(0).tolist()
+
+    def score_avatar(self, pil_image) -> Optional[float]:
+        """Reuses POSITIVE + NEGATIVE prompts plus athletic headshot allowance."""
+        if not self.load():
+            return None
+        import torch
+
+        prompts = ["a clean fitness portrait, gym selfie, or athletic headshot"] + POSITIVE + NEGATIVE
+        inputs = self._proc(text=prompts, images=pil_image, return_tensors="pt", padding=True)
+        with torch.no_grad():
+            probs = self._model(**inputs).logits_per_image.softmax(dim=1).squeeze(0)
+        return float(probs[: 1 + len(POSITIVE)].sum())
 
 
 def enabled() -> bool:

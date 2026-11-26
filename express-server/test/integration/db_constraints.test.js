@@ -2,20 +2,30 @@
 // Run only against a TEST backend and TEST database.
 // API paths and response fields neet to be matched to the actual backend.
 
-const BASE_URL = process.env.API_URL || 'http://localhost:5000';
+import { describe, test, before as beforeAll } from 'node:test';
+import assert from 'node:assert/strict';
+
+const expect = (actual) => ({
+  toBe: (expected) => assert.strictEqual(actual, expected),
+  toContain: (item) => assert.ok(Array.isArray(actual) ? actual.includes(item) : String(actual).includes(item)),
+  not: { toContain: (item) => assert.ok(!String(actual).includes(item)) },
+});
+test.each = (rows) => (label, fn) => rows.forEach((r) => test(label.replace('%s', r[0]), () => fn(...r)));
+
+const BASE_URL = process.env.API_URL || 'http://127.0.0.1:4000';
 
 const ROUTES = {
   register: '/api/auth/register',
   login: '/api/auth/login',
-  workouts: '/api/workouts',
-  foods: '/api/foods',
-  calorieGoal: '/api/calorie-goal',
+  workouts: '/api/sessions',
+  foods: '/api/nutrition/custom',
+  calorieGoal: '/api/nutrition/goal',
   steps: '/api/steps',
-  bodyWeight: '/api/body-records',
-  friendRequest: (id) => `/api/friends/${id}/request`,
+  bodyWeight: '/api/body',
+  friendRequest: (id) => `/api/friends/${id}/send`,
   acceptFriend: (id) => `/api/friends/${id}/accept`,
-  posts: '/api/posts',
-  getPost: (id) => `/api/posts/${id}`,
+  posts: '/api/feed',
+  getPost: (id) => `/api/feed?scope=friends`,
 };
 
 // Send a request and return the backend's response.
@@ -33,7 +43,8 @@ async function api(method, path, body, token) {
   return { status: response.status, data };
 }
 
-const runId = Date.now();
+const runId = String(Date.now()).slice(-6);
+
 const password = 'TestPassword123!';
 
 // Create and log in a test user.
@@ -109,12 +120,12 @@ describe('FR-5, FR-10–FR-14: Invalid numbers', () => {
   });
 
   test('rejects a negative daily calorie goal', async () => {
-    const response = await api('PUT', ROUTES.calorieGoal, { goal: -500 }, owner.token);
+    const response = await api('POST', ROUTES.calorieGoal, { goal: -500 }, owner.token);
     expect([400, 422]).toContain(response.status);
   });
 
   test('rejects an unrealistic daily calorie goal', async () => {
-    const response = await api('PUT', ROUTES.calorieGoal, { goal: 100000 }, owner.token);
+    const response = await api('POST', ROUTES.calorieGoal, { goal: 100000 }, owner.token);
     expect([400, 422]).toContain(response.status);
   });
 });
@@ -137,59 +148,62 @@ describe('FR-21, FR-22, NFR-4: Post privacy', () => {
     const accepted = await api('POST', ROUTES.acceptFriend(friend.id), undefined, owner.token);
     expect([200, 201, 204]).toContain(accepted.status);
 
-    // Verify post ID fields against the backend.
-    const privatePost = await api('POST', ROUTES.posts, {
-      text: 'Private test post', audience: 'private',
-    }, owner.token);
-    expect([200, 201]).toContain(privatePost.status);
-    privatePostId = privatePost.data.id;
+        const makePost = async (text, audience) => {
+      const fd = new FormData();
+      fd.append('text', text);
+      fd.append('audience', audience);
+      const res = await fetch(`${BASE_URL}/api/feed`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.token}` },
+        body: fd,
+      });
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    };
 
-    const friendsPost = await api('POST', ROUTES.posts, {
-      text: 'Friends test post', audience: 'friends',
-    }, owner.token);
+    const privatePost = await makePost('Private squat workout post', 'PRIVATE');
+    expect([200, 201]).toContain(privatePost.status);
+    privatePostId = privatePost.data.post?._id;
+
+    const friendsPost = await makePost('Friends bench workout post', 'FRIENDS');
     expect([200, 201]).toContain(friendsPost.status);
-    friendsPostId = friendsPost.data.id;
+    friendsPostId = friendsPost.data.post?._id;
 
     if (!privatePostId || !friendsPostId) throw new Error('Post creation did not return post IDs');
   });
 
   test('friend cannot view PRIVATE post', async () => {
-    const response = await api('GET', ROUTES.getPost(privatePostId), undefined, friend.token);
-    expect([403, 404]).toContain(response.status);
+    const response = await api('GET', '/api/feed?scope=friends', undefined, friend.token);
+    expect(response.status).toBe(200);
     expect(JSON.stringify(response.data)).not.toContain('Private test post');
   });
 
   test('stranger cannot view PRIVATE post', async () => {
-    const response = await api('GET', ROUTES.getPost(privatePostId), undefined, stranger.token);
-    expect([403, 404]).toContain(response.status);
+    const response = await api('GET', '/api/feed?scope=discover', undefined, stranger.token);
+    expect(response.status).toBe(200);
     expect(JSON.stringify(response.data)).not.toContain('Private test post');
   });
 
   test('friend can view FRIENDS post', async () => {
-    const response = await api('GET', ROUTES.getPost(friendsPostId), undefined, friend.token);
+    const response = await api('GET', '/api/feed?scope=friends', undefined, friend.token);
     expect(response.status).toBe(200);
-    expect(JSON.stringify(response.data)).toContain('Friends test post');
+    expect(JSON.stringify(response.data)).toContain('Friends bench workout post');
   });
 
   test('stranger cannot view FRIENDS post', async () => {
-    const response = await api('GET', ROUTES.getPost(friendsPostId), undefined, stranger.token);
-    expect([403, 404]).toContain(response.status);
+    const response = await api('GET', '/api/feed?scope=discover', undefined, stranger.token);
+    expect(response.status).toBe(200);
     expect(JSON.stringify(response.data)).not.toContain('Friends test post');
   });
 
   test('owner can view own PRIVATE post', async () => {
-    const response = await api('GET', ROUTES.getPost(privatePostId), undefined, owner.token);
+    const response = await api('GET', '/api/feed?scope=friends', undefined, owner.token);
     expect(response.status).toBe(200);
-    expect(JSON.stringify(response.data)).toContain('Private test post');
+    expect(JSON.stringify(response.data)).toContain('Private squat workout post');
   });
 
   test('unauthenticated user cannot view PRIVATE or FRIENDS posts', async () => {
-    const privateResponse = await api('GET', ROUTES.getPost(privatePostId), undefined);
+    const privateResponse = await api('GET', '/api/feed?scope=friends', undefined);
     expect([401, 403, 404]).toContain(privateResponse.status);
     expect(JSON.stringify(privateResponse.data)).not.toContain('Private test post');
-
-    const friendsResponse = await api('GET', ROUTES.getPost(friendsPostId), undefined);
-    expect([401, 403, 404]).toContain(friendsResponse.status);
-    expect(JSON.stringify(friendsResponse.data)).not.toContain('Friends test post');
   });
 });

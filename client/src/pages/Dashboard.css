@@ -261,13 +261,43 @@
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.75rem;
     min-height: 0;
-    padding: 2.5rem 0 3rem;
+    padding: 2rem 0 2.5rem;
   }
-  .hero-copy { max-width: none; }
-  .hero-title { font-size: clamp(3.2rem, 14vw, 5rem); }
-  .hero-lede { max-width: 34ch; }
+  .hero-copy {
+    max-width: none;
+    padding-right: 0;
+  }
+  .hero-title {
+    font-size: clamp(3.2rem, 14vw, 5rem) !important;
+  }
+  .hero-lede {
+    max-width: 34ch;
+    font-size: 1.15rem !important;
+  }
+  .hero-points {
+    font-size: 1.05rem;
+  }
+  .hero-art {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 1rem;
+  }
+  .hero-art-actions {
+    position: static;
+    transform: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .art-badge-btn {
+    width: 100%;
+    padding: 0.95rem 1.25rem;
+    font-size: 1.15rem !important;
+    border-radius: 1rem;
+  }
 }
 
 /* ------------------------------------------------------------------ gears */
@@ -929,4 +959,89 @@
 .testimonial-dot.active {
   background: var(--navy);
   transform: scale(1.25);
+}
+
+/* ------------------------------------------------------------------ Ambient Vertical Strips on TestimonialsView */
+.testimonials-page {
+  overflow-x: hidden;
+}
+
+.testimonials-page .testimonials-slider-container,
+.testimonials-page .testimonials-dots,
+.testimonials-page > div:last-child {
+  position: relative;
+  z-index: 2;
+}
+
+.ambient-strips-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient-strip {
+  position: absolute;
+  top: 6%;
+  height: 88vh;
+  width: clamp(95px, 11vw, 175px);
+  object-fit: cover;
+  border-radius: 24px;
+  will-change: opacity, transform;
+}
+
+.ambient-strip-left.ambient-strip-slot-0 {
+  left: 1.2%;
+  animation: stripDriftLeft 3.4s ease-in-out infinite alternate;
+}
+
+.ambient-strip-left.ambient-strip-slot-1 {
+  left: 11.5%;
+  top: 10%;
+  height: 80vh;
+  animation: stripDriftRight 3.8s ease-in-out infinite alternate;
+}
+
+.ambient-strip-right.ambient-strip-slot-0 {
+  right: 1.2%;
+  animation: stripDriftRight 3.4s ease-in-out infinite alternate;
+}
+
+.ambient-strip-right.ambient-strip-slot-1 {
+  right: 11.5%;
+  top: 10%;
+  height: 80vh;
+  animation: stripDriftLeft 3.8s ease-in-out infinite alternate;
+}
+
+@keyframes stripDriftLeft {
+  0% {
+    opacity: 0.25;
+    transform: translateX(-14px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(10px) scale(1.01);
+  }
+}
+
+@keyframes stripDriftRight {
+  0% {
+    opacity: 0.25;
+    transform: translateX(14px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-10px) scale(1.01);
+  }
+}
+
+@media (max-width: 900px) {
+  .ambient-strip-slot-1 {
+    display: none;
+  }
+  .ambient-strip {
+    width: 72px;
+  }
 }

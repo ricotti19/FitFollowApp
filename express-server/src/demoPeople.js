@@ -65,7 +65,7 @@ const TEMPLATES = [
   () => 'Morning run before sunrise. Worth every yawn.',
   () => 'Pull-ups finally feel smooth. Back day is paying off.',
   (n) => `Hit my ${n.steps} step goal and then walked the dog for bonus steps.`,
-  () => 'Rest day. Stretching, hydrating, and doing nothing on purpose.',
+  () => 'Gym session locked in. Hydrating and staying consistent.',
   (n) => `Squatted ${n.w} lb today. Form first, ego never.`,
   () => 'Tried a new protein shake recipe. 10/10, would blend again.',
   (n) => `Down ${n.lb} lb since I started tracking. Logging every day is the trick.`,
@@ -85,7 +85,7 @@ const SHORT_PUMPS = [
   () => 'upper body done',
   () => 'chicken rice broccoli again lol',
   (n) => `hit ${n.steps} steps around campus today`,
-  () => 'rest day mobility + hydration',
+  () => 'post-workout stretch + hydration',
 ];
 
 const STORY_INTROS = [

@@ -179,6 +179,139 @@ def create_app(store: ModelStore | None = None, clip="default") -> Flask:
         p = model.predict_proba(landmarks_to_features(lms))
         return jsonify(poseFound=True, goodFormProbability=round(p, 4), label="good_form" if p >= 0.5 else "bad_form")
 
+
+    @app.post("/classify-exercise")
+    def classify_exercise():
+        data = request.get_json(silent=True) or {}
+        name = str(data.get("exercise") or "").strip()
+        if len(name) < 2 or len(name) > 60:
+            return jsonify(valid=False, requiresWeight=False, mode="weighted_strength", score=0.0)
+        if clip is None:
+            return jsonify(valid=True, requiresWeight=False, mode="weighted_strength", score=0.75)
+
+        sims = clip.score_text(name, [
+            "a physical fitness exercise, sport, aerobic movement, mind-body practice, or dance form",
+            "food, meal, beverage, or culinary ingredient",
+            "inanimate object, non-physical noun, or nonsense text",
+        ], scale=25.0)
+        m_sims = clip.score_text(name, [
+            "resistance training performed with external weights or gym equipment",
+            "calisthenics or bodyweight strength exercise counted in repetitions and sets",
+            "locomotive endurance cardio measured by duration and travel speed",
+            "choreographed movement, dance, mobility, or mind-body session measured by duration",
+        ], scale=22.0)
+        if sims is None or m_sims is None:
+            return jsonify(valid=True, requiresWeight=False, mode="weighted_strength", score=0.75)
+
+        activity_prob = float(sims.pop(0))
+        food_prob = float(sims.pop(0))
+        mode_keys = ["weighted_strength", "bodyweight_strength", "cardio_speed", "movement_duration"]
+        best_mode = mode_keys[max(range(len(m_sims)), key=lambda i: m_sims[i])]
+        return jsonify(
+            valid=(activity_prob >= 0.58 and food_prob < 0.25),
+            requiresWeight=(best_mode == "weighted_strength"),
+            mode=best_mode,
+            score=round(activity_prob, 3),
+        )
+
+    _tox_pipe = None
+
+    def get_toxicity_pipe():
+        nonlocal _tox_pipe
+        if _tox_pipe is not None:
+            return _tox_pipe
+        try:
+            from transformers import pipeline
+            _tox_pipe = pipeline("text-classification", model="unitary/toxic-bert", top_k=None)
+            return _tox_pipe
+        except Exception as e:
+            print(f"[cv] toxicity model unavailable: {e}")
+            return False
+
+    @app.post("/classify-comment")
+    def classify_comment():
+        data = request.get_json(silent=True) or {}
+        text = str(data.get("text") or "").strip()
+        if not text:
+            return jsonify(allowed=False, score=0.0)
+
+        # Layer 2: Dedicated NLP Toxicity Classifier (unitary/toxic-bert)
+        pipe = get_toxicity_pipe()
+        if pipe:
+            rows = pipe(text[:512])
+            items = rows[0] if rows and isinstance(rows[0], list) else rows
+            worst_tox = max(float(item["score"]) for item in items)
+            
+            if worst_tox >= 0.50:
+                return jsonify(allowed=False, layer="toxic-bert", toxicity=round(worst_tox, 3))
+
+        # Layer 3: Existing CLIP Semantic Encouragement vs. Put-Down Check
+        if clip is not None:
+            sims = clip.score_text(text, [
+                "a kind, supportive, encouraging, friendly, or neutral message",
+                "a rude, insulting, mean, discouraging, or hostile attack on someone",
+            ], scale=15.0)
+            if sims is not None:
+                pos_prob = float(sims.pop(0))
+                neg_prob = float(sims.pop(0))
+                if neg_prob > pos_prob + 0.05:
+                    return jsonify(allowed=False, layer="clip", score=round(pos_prob, 3))
+
+        return jsonify(allowed=True)
+
+    ACTIVITY_PROMPTS = [
+        ("squats", "a photo of a person performing barbell back squats or lunges in a gym"),
+        ("deadlift", "a photo of a person lifting a heavy barbell off the floor doing deadlifts"),
+        ("bench", "a photo of a person lying on a gym bench doing barbell or dumbbell chest press"),
+        ("arms_shoulders", "a photo of a person lifting dumbbells for bicep curls or overhead shoulder press"),
+        ("back_pull", "a photo of a person doing pull-ups, lat pulldowns, or cable rows in a gym"),
+        ("outdoor_run", "a photo of a person running or jogging outdoors on a road, trail, or track"),
+        ("treadmill_cardio", "a photo of a person running or walking on a treadmill or rowing machine"),
+        ("cycling", "a photo of a person riding a stationary spin bike or outdoor bicycle"),
+        ("yoga_stretch", "a photo of a person doing yoga poses, stretching, or pilates on a floor mat"),
+        ("core_abs", "a photo of a person doing planks, crunches, or floor abdominal core workouts"),
+        ("hiit_kettlebell", "a photo of a person swinging a kettlebell, slamming battle ropes, or doing box jumps"),
+        ("group_class", "a photo of a group fitness class exercising together in a studio"),
+        ("meal_nutrition", "a photo of a healthy high-protein meal, salad bowl, smoothie, or meal prep"),
+        ("gym_selfie", "a photo of a person taking a post-workout gym mirror selfie"),
+        ("rest_recovery", "a photo of a person resting after a workout, foam rolling, drinking water, or relaxing on a couch"),
+        ("sports", "a photo of a person playing basketball, tennis, soccer, or football on a court or field"),
+    ]
+
+    @app.post("/classify-activity")
+    def classify_activity():
+        rgb, err = read_upload()
+        if err:
+            return err
+        if clip is None or not clip.load():
+            return jsonify(category="general", confidence=0.5)
+        import torch
+        labels = [prompt for _, prompt in ACTIVITY_PROMPTS]
+        keys = [key for key, _ in ACTIVITY_PROMPTS]
+        pil_img = Image.fromarray(rgb)
+        inputs = clip._proc(text=labels, images=pil_img, return_tensors="pt", padding=True)
+        with torch.no_grad():
+            probs = (clip._model(**inputs).logits_per_image * 1.5).softmax(dim=1).squeeze(0).tolist()
+        best_idx = max(range(len(probs)), key=lambda i: probs[i])
+        best_conf = float(probs[best_idx])
+        category = keys[best_idx] if best_conf >= 0.16 else "general"
+        return jsonify(category=category, confidence=round(best_conf, 3))
+
+
+    @app.post("/classify-avatar")
+    def classify_avatar():
+        rgb, err = read_upload()
+        if err:
+            return err
+        if clip is None:
+            return jsonify(approved=True, score=0.75)
+
+        score = clip.score_avatar(Image.fromarray(rgb))
+        if score is None:
+            return jsonify(approved=True, score=0.75)
+        return jsonify(approved=score >= 0.55, score=round(score, 3))
+
+
     app.config["store"] = store
     return app
 

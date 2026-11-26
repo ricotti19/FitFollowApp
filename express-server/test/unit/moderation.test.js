@@ -139,9 +139,10 @@ describe("Words that look bad but aren't (should be allowed)", () => {
 // 4. Off-topic captions
 // ─────────────────────────────────────────────────────────────
 describe("Off-topic captions (should be blocked)", () => {
-  test("teammate's example: junk food with no fitness point", () => {
-    expectBlocked("I eat icecream 24/7", "off_topic");
+  test("off-topic lifestyle statement with no fitness point", () => {
+    expectBlocked("I watch Netflix 24/7 on my couch", "off_topic");
   });
+
 
   test("random keyboard mash", () => {
     expectBlocked("asdfghjkl", "off_topic");

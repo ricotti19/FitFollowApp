@@ -37,8 +37,6 @@ env/
 
 # Machine Learning & Media Uploads
 *.pt
-*.pth
-*.task
 *.ckpt
 *.onnx
 *.h5
@@ -48,6 +46,7 @@ env/
 data/
 dataset/
 datasets/
+model/
 uploads/
 checkpoints/
 runs/
@@ -57,3 +56,8 @@ build/
 dist/
 out/
 coverage/
+
+express-server/public/
+express-server/public/avatars/
+express-server/public/feed/
+express-server/public/stories/

@@ -277,6 +277,13 @@ export function LandingDirectory({ onSelect, onBack }) {
   },
 ];
 
+const AMBIENT_STRIPS = [
+  { src: '/banners/fitness.png', side: 'left', slot: 0 },
+  { src: '/banners/fitness2.png', side: 'left', slot: 1 },
+  { src: '/banners/fitness3.png', side: 'right', slot: 0 },
+  { src: '/banners/fitness4.png', side: 'right', slot: 1 },
+];
+
 export function TestimonialsView({ onBack, onRegister }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -290,7 +297,19 @@ export function TestimonialsView({ onBack, onRegister }) {
 
   return (
     <section className="overview-page testimonials-page" aria-label="Customer stories">
-      <header className="overview-header">
+      <div className="ambient-strips-layer" aria-hidden="true">
+        {AMBIENT_STRIPS.map((s, idx) => (
+          <img
+            key={s.src}
+            src={s.src}
+            alt=""
+            className={`ambient-strip ambient-strip-${s.side} ambient-strip-slot-${s.slot}`}
+            style={{ animationDelay: `${idx * 0.65}s` }}
+          />
+        ))}
+      </div>
+
+      <header className="overview-header" style={{ position: 'relative', zIndex: 2 }}>
         <button type="button" className="overview-back" onClick={onBack}>
           ← Back
         </button>

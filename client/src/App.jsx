@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api, getToken, setToken, setUnauthorizedHandler, clearPhotoCache } from './lib/api';
 import { headerDate } from './lib/format';
 import Avatar from './components/Avatar';
+import StoriesModal from './components/StoriesModal';
+import DmsModal from './components/DmsModal';
 import SettingsPage from './pages/SettingsPage';
 import TodayTab from './pages/TodayTab';
 import WorkoutsTab from './pages/WorkoutsTab';
@@ -126,8 +128,31 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState(Boolean(getToken()));
   const [accentTheme, setAccentTheme] = useState(() => getStoredTheme());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [topModal, setTopModal] = useState(null); // null | 'stories' | 'dms'
+  const [storyFocusUser, setStoryFocusUser] = useState(null);
+  const [feedJump, setFeedJump] = useState(null); // null | { scope: 'friends' | 'discover', ts: number }
   const menuRef = useRef(null);
+
+  const [incomingReqs, setIncomingReqs] = useState([]);
+const [dismissedReqIds, setDismissedReqIds] = useState(() => new Set());
+
+useEffect(() => {
+  if (!user) { setIncomingReqs([]); return; }
+  let live = true;
+  const checkRequests = () => {
+    api.get('/friends')
+      .then((d) => { if (live) setIncomingReqs(d.incoming || []); })
+      .catch(() => {});
+  };
+  checkRequests();
+  const id = setInterval(checkRequests, 8000);
+  return () => { live = false; clearInterval(id); };
+}, [user]);
+
+const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
+
 
   const logout = () => {
     setMenuOpen(false);
@@ -182,10 +207,27 @@ export default function App() {
 
   // ---- MAIN APP ----
   return (
-    <div className="app">
-      <header className="app-header">
-        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setActiveTab('today'); }}>FitFollow</a>
+    <div className="app">      
+    <header className="app-header">
+        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setTopModal(null); setActiveTab('today'); }}>FitFollow</a>
         <div className="header-right">
+                 <button
+         type="button"
+         className="btn small ghost"
+         style={{ padding: '5px 10px', fontSize: '0.82rem' }}
+          onClick={() => { setFeedJump(null); setStoryFocusUser(null); setTopModal('stories'); }}
+       >
+         + Story
+       </button>
+       <button
+         type="button"
+         className="btn small ghost"
+         style={{ padding: '5px 10px', fontSize: '0.82rem' }}
+         onClick={() => { setShowSettings(false); setTopModal('dms'); }}
+
+       >
+         DMs
+       </button>
           <span className="header-date">{headerDate()}</span>
           <label className="theme-picker" title="Choose accent color">
             <span className="theme-dot" aria-hidden="true" />
@@ -202,17 +244,19 @@ export default function App() {
             </select>
           </label>
           <div className="profile-menu" ref={menuRef}>
-            <button
-              type="button"
-              className="avatar-btn"
-              onClick={() => setMenuOpen((o) => !o)}
-              title="Account"
-              aria-label="Account menu"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-            >
-              <Avatar user={user} size={34} />
-            </button>
+          <button
+           type="button"
+           className="avatar-btn"
+           style={{ width: 46, height: 46 }}
+           onClick={() => setMenuOpen((o) => !o)}
+           title="Account"
+           aria-label="Account menu"
+           aria-haspopup="menu"
+           aria-expanded={menuOpen}
+         >
+           <Avatar user={user} size={46} />
+         </button>
+
             {menuOpen && (
               <div className="profile-popover" role="menu">
                 <div className="profile-popover-head">
@@ -230,7 +274,15 @@ export default function App() {
                 <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
                   Profile &amp; privacy
                 </button>
-                <button type="button" role="menuitem" className="profile-popover-item danger" onClick={logout}>
+                  <button
+                  type="button"
+                  role="menuitem"
+                  className="profile-popover-item danger"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setConfirmSignOut(true);
+                  }}
+                >
                   Sign out
                 </button>
               </div>
@@ -239,23 +291,171 @@ export default function App() {
         </div>
       </header>
 
-      <main className="app-main stack">
-        {showSettings && <SettingsPage user={user} onUserChange={setUser} onBack={() => setShowSettings(false)} />}
-        {!showSettings && activeTab === 'today' && <TodayTab user={user} />}
-        {!showSettings && activeTab === 'workouts' && <WorkoutsTab />}
-        {!showSettings && activeTab === 'body' && <BodyTab />}
-        {!showSettings && activeTab === 'friends' && <FriendsTab user={user} onOpenSettings={() => setShowSettings(true)} />}
-      </main>
+         {visibleReqs.length > 0 && (
+     <div
+       role="status"
+       style={{
+         position: 'fixed',
+         top: 76,
+         right: 20,
+         zIndex: 950,
+         width: 'min(360px, calc(100vw - 32px))',
+         background: '#ffffff',
+         color: '#14141f',
+         border: '2px solid var(--accent)',
+         borderRadius: 18,
+         padding: '14px 16px',
+         boxShadow: '0 14px 36px rgba(20, 20, 31, 0.2)',
+         display: 'flex',
+         flexDirection: 'column',
+         gap: 10,
+       }}
+     >
+       <div className="row spread">
+         <strong style={{ fontSize: '0.92rem' }}>
+           👋 Friend Request{visibleReqs.length > 1 ? `s (${visibleReqs.length})` : ''}
+         </strong>
+         <button
+           type="button"
+           className="btn small ghost"
+           style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+           aria-label="Dismiss notification"
+           onClick={() => setDismissedReqIds((prev) => new Set([...prev, ...visibleReqs.map((u) => u.id)]))}
+         >
+           ×
+         </button>
+       </div>
+       {visibleReqs.map((u) => (
+         <div key={u.id} className="row spread" style={{ gap: 8 }}>
+           <div className="row" style={{ gap: 8, minWidth: 0 }}>
+             <Avatar user={u} size={34} />
+             <div className="person-names" style={{ minWidth: 0 }}>
+               <div className="name" style={{ fontSize: '0.9rem' }}>{u.displayName || u.username}</div>
+               <div className="handle" style={{ fontSize: '0.78rem' }}>@{u.username}</div>
+             </div>
+           </div>
+           <div className="row" style={{ gap: 6 }}>
+             <button
+               type="button"
+               className="btn small"
+               onClick={async () => {
+                 await api.post(`/friends/${u.id}/accept`).catch(() => {});
+                 setIncomingReqs((prev) => prev.filter((x) => x.id !== u.id));
+               }}
+             >
+               Accept
+             </button>
+             <button
+               type="button"
+               className="btn small ghost"
+               onClick={() => {
+                 setShowSettings(false);
+                 setTopModal(null);
+                 setActiveTab('friends');
+               }}
+             >
+               View
+             </button>
+           </div>
+         </div>
+       ))}
+     </div>
+   )}
+
+   <aside className="ff-feed-rail" aria-label="Feed view">
+     <button
+       type="button"
+       className={`ff-feed-rail-btn ${activeTab === 'friends' && (!feedJump || feedJump.scope === 'friends') ? 'active' : ''}`}
+       onClick={() => {
+         setShowSettings(false);
+         setTopModal(null);
+         setActiveTab('friends');
+         setFeedJump({ scope: 'friends', ts: Date.now() });
+       }}
+     >
+       <span className="icon" aria-hidden="true">🏠</span>
+       <span>Home</span>
+     </button>
+          <button
+       type="button"
+       className={`ff-feed-rail-btn ${activeTab === 'friends' && feedJump?.scope === 'discover' ? 'active' : ''}`}
+       onClick={() => {
+         setShowSettings(false);
+         setTopModal(null);
+         setActiveTab('friends');
+         setFeedJump({ scope: 'discover', ts: Date.now() });
+       }}
+     >
+       <span className="icon" aria-hidden="true">🧭</span>
+       <span>Discover</span>
+     </button>
+
+     <button
+       type="button"
+       className={`ff-feed-rail-btn ${topModal === 'stories' ? 'active' : ''}`}
+       onClick={() => {
+        setShowSettings(false);
+        setFeedJump(null);
+        setStoryFocusUser(null);
+        setTopModal('stories');
+       }}
+     >
+       <span className="icon" aria-hidden="true">✨</span>
+       <span>Stories</span>
+     </button>
+   </aside>
+
+    <main className="app-main stack">
+     {showSettings && <SettingsPage user={user} onUserChange={setUser} onBack={() => setShowSettings(false)} />}
+     {!showSettings && topModal === 'dms' && <DmsModal onClose={() => setTopModal(null)} />}
+               {!showSettings && topModal === 'stories' && (
+       <StoriesModal
+         user={user}
+         focusUsername={storyFocusUser}
+         onClearFocus={() => setStoryFocusUser(null)}
+         onClose={() => {
+           const returnUser = storyFocusUser;
+           setTopModal(null);
+           setStoryFocusUser(null);
+           if (returnUser) {
+             setActiveTab('friends');
+             setFeedJump({ scope: 'discover', openUser: returnUser, ts: Date.now() });
+           }
+         }}
+         onOpenProfile={(uname) => {
+           setShowSettings(false);
+           setTopModal(null);
+           setStoryFocusUser(null);
+           setActiveTab('friends');
+           setFeedJump({ scope: 'discover', openUser: uname, ts: Date.now() });
+         }}
+       />
+     )}
+     {!showSettings && !topModal && activeTab === 'today' && <TodayTab user={user} />}
+     {!showSettings && !topModal && activeTab === 'workouts' && <WorkoutsTab />}
+     {!showSettings && !topModal && activeTab === 'body' && <BodyTab />}
+     {!showSettings && activeTab === 'friends' && (
+       <div className={topModal ? 'hidden' : ''}>
+         <FriendsTab
+           user={user}
+           onOpenSettings={() => setShowSettings(true)}
+           feedJump={feedJump}
+           onOpenStories={(uname) => { setStoryFocusUser(uname || null); setTopModal('stories'); }}
+         />
+       </div>
+     )}
+
+   </main>
 
       <nav className="tabbar" aria-label="Main navigation">
         {TABS.map((t) => {
-          const active = !showSettings && activeTab === t.id;
+          const active = !showSettings && !topModal && activeTab === t.id;
           return (
             <button
               key={t.id}
               type="button"
               className={`tab ${active ? 'active' : ''}`}
-              onClick={() => { setShowSettings(false); setActiveTab(t.id); }}
+              onClick={() => { setShowSettings(false); setTopModal(null); setActiveTab(t.id); }}
               aria-current={active ? 'page' : undefined}
               aria-label={t.label}
             >
@@ -265,6 +465,54 @@ export default function App() {
           );
         })}
       </nav>
+
+      {confirmSignOut && (
+        <div
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmSignOut(false); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(20, 20, 31, 0.5)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="stack"
+            style={{
+              width: 'min(400px, 92vw)',
+              background: '#ffffff',
+              color: '#14141f',
+              border: '2px solid rgba(20, 20, 31, 0.16)',
+              borderRadius: 24,
+              padding: '26px 28px',
+              boxShadow: '0 22px 50px rgba(20, 20, 31, 0.25)',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Sign out of FitFollow?</h3>
+            <p className="small muted" style={{ margin: 0 }}>
+              You will need to sign back in with your email and password to access your workouts and feed.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmSignOut(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn small dark-navy"
+                onClick={() => {
+                  setConfirmSignOut(false);
+                  logout();
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

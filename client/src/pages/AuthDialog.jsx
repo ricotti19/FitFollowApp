@@ -66,7 +66,7 @@ export default function AuthDialog({ mode, plan, onClose, onSwitch, onSuccess, o
             displayName: form.displayName.trim(),
             password: form.password,
             phone: form.phone.trim(),
-            ...(plan ? { profile: plan } : {}), // the BMI-form answers: the server turns them into the calorie goal
+            ...(planGoals ? { calorieGoal: planGoals.calories, plan: { ...plan, bmi: planGoals.bmi, category: planGoals.category, goalUsed: planGoals.goalUsed } } : {}),
           };
       const res = await api.post(endpoint, payload);
       setToken(res.token);

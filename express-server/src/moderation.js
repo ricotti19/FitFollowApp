@@ -23,6 +23,7 @@ const MAX_BIO_LENGTH = 160;
 const REASONS = Object.freeze({
   OK: "ok",
   PROFANITY: "profanity",
+  UNCIVIL: "uncivil",
   SPAM: "spam",
   OFF_TOPIC: "off_topic",
   TOO_LONG: "too_long",
@@ -58,29 +59,97 @@ const PROFANITY = new Set(
 const squish = (word) => word.replace(/(.)\1{2,}/g, "$1");
 const PROFANITY_SQUISHED = new Set([...PROFANITY].map(squish));
 
-// Words that make a caption count as fitness, food, body, or progress related.
 const FITNESS_WORDS = new Set([
-  // training
-  "workout", "workouts", "train", "training", "trained", "gym", "lift", "lifts", "lifting", "lifted",
-  "squat", "squats", "bench", "deadlift", "deadlifts", "press", "curl", "curls", "row", "rows",
-  "rower", "pullup", "pullups", "pushup", "pushups", "plank", "lunge", "lunges", "dips",
-  "rep", "reps", "set", "sets", "pr", "prs", "pb", "max", "form", "coach", "trainer",
-  "leg", "legs", "arm", "arms", "chest", "back", "shoulders", "abs", "core", "glutes", "biceps", "triceps",
-  "cardio", "hiit", "run", "ran", "running", "jog", "jogging", "sprint", "mile", "miles",
-  "marathon", "walk", "walked", "walking", "steps", "hike", "hiked", "bike", "biked", "ride",
-  "cycling", "spin", "swim", "swam", "swimming", "yoga", "pilates", "stretch", "stretching",
-  "rest", "recovery", "sore", "gains", "shredded", "bulk", "bulking", "cut", "cutting",
-  "personal", "best", "fitness", "fit", "athlete", "sport", "sports",
-  // food tracking
-  "meal", "meals", "prep", "protein", "carbs", "carb", "macros", "macro", "kcal", "calories",
-  "calorie", "diet", "nutrition", "chicken", "rice", "broccoli", "oats", "oatmeal", "eggs",
-  "salad", "shake", "whey", "veggies", "cheat",
-  // body
-  "weight", "weigh", "weighin", "lb", "lbs", "kg", "kgs", "pounds", "bodyweight",
-  "progress", "transformation",
-  // Spanish (some of our users)
-  "pierna", "piernas", "sentadilla", "sentadillas", "gimnasio", "entrenamiento",
-  "entreno", "rutina", "pesas", "correr", "comida", "proteina", "récord", "record",
+  // training, splits & gym culture
+  "workout", "workouts", "train", "training", "trained", "gym", "gymrat", "gymlife", "fitness", "fit",
+  "lift", "lifts", "lifting", "lifted", "lifter", "lifters", "weights", "weightlifting", "powerlifting",
+  "powerlifter", "bodybuilding", "bodybuilder", "olympic", "weightlifter", "strongman", "crossfit", "crossfitter",
+  "hypertrophy", "strength", "conditioning", "metcon", "amrap", "emom", "tabata", "circuit", "circuits",
+  "ppl", "push", "pull", "upper", "lower", "fullbody", "split", "splits", "bro", "routine", "program",
+  "rep", "reps", "set", "sets", "superset", "supersets", "dropset", "dropsets", "failure", "rpe", "rir",
+  "pr", "prs", "pb", "pbs", "max", "1rm", "orm", "volume", "intensity", "overload", "deload",
+  "form", "cue", "cues", "spot", "spotter", "coach", "coaching", "trainer", "session", "sessions",
+  // specific exercises & equipment
+  "squat", "squats", "squatting", "frontsquat", "goblet", "hacksquat", "bench", "benching", "incline", "decline",
+  "deadlift", "deadlifts", "deadlifting", "rdl", "rdls", "sumo", "conventional", "trapbar", "rackpull",
+  "press", "pressing", "ohp", "overhead", "arnold", "fly", "flies", "flyes", "crossover", "pec",
+  "curl", "curls", "curling", "hammer", "preacher", "concentration", "extension", "extensions", "skullcrusher",
+  "row", "rows", "rowing", "rower", "pendlay", "tbar", "lat", "lats", "pulldown", "pulldowns",
+  "pullup", "pullups", "chinup", "chinups", "muscleup", "muscleups", "pushup", "pushups", "dips", "dip",
+  "plank", "planks", "planking", "crunch", "crunches", "situp", "situps", "legraise", "flutter", "hollow",
+  "lunge", "lunges", "lunging", "bulgarian", "stepup", "stepups", "hipthrust", "thrust", "bridge", "calf",
+  "shrug", "shrugs", "raise", "raises", "lateral", "facepull", "facepulls", "burpee", "burpees", "thruster",
+  "snatch", "clean", "jerk", "swing", "swings", "turkish", "getup", "farmer", "carry", "carries", "sled",
+  "calisthenics", "kettlebell", "kettlebells", "dumbbell", "dumbbells", "barbell", "barbells", "plate", "plates",
+  "cable", "cables", "machine", "rack", "squatrack", "smith", "treadmill", "stairmaster", "elliptical", "erg",
+  "band", "bands", "resistance", "trx", "bosu", "foam", "roller", "chalk", "belt", "straps", "sleeves", "wraps",
+  // anatomy & muscle groups
+  "leg", "legs", "legday", "arm", "arms", "chest", "back", "shoulder", "shoulders", "delts", "rear",
+  "abs", "core", "obliques", "glute", "glutes", "bicep", "biceps", "tricep", "triceps", "forearm", "forearms",
+  "quad", "quads", "hamstring", "hamstrings", "calves", "trap", "traps", "rhomboids", "hip", "hips", "flexors",
+  "muscle", "muscles", "muscular", "physique", "vascular", "pump", "pumped", "swole", "jacked", "toned", "toning",
+  // cardio, running, cycling & endurance
+  "cardio", "aerobic", "anaerobic", "vo2", "zone2", "heartrate", "bpm", "sweat", "sweating", "sweaty",
+  "hiit", "liss", "run", "ran", "running", "runner", "runners", "jog", "jogging", "jogger",
+  "sprint", "sprints", "sprinting", "sprinter", "strides", "fartlek", "intervals", "tempo", "threshold",
+  "mile", "miles", "mileage", "km", "kilometers", "5k", "10k", "15k", "half", "marathon", "marathoner",
+  "ultra", "ultramarathon", "ultrarunner", "triathlon", "triathlete", "ironman", "duathlon", "biathlon",
+  "track", "trail", "trails", "trailrun", "roadrun", "pace", "pacing", "splits", "cadence", "endurance", "stamina",
+  "walk", "walked", "walking", "walker", "walkers", "steps", "10ksteps", "ruck", "rucking", "rucksack",
+  "hike", "hiked", "hiking", "hiker", "hikers", "summit", "elevation", "incline", "trek", "trekking",
+  "bike", "biked", "biking", "bicycle", "cyclist", "cyclists", "cycling", "ride", "riding", "rider",
+  "spin", "spinning", "peloton", "zwift", "gravel", "mtb", "mountainbike", "watt", "watts", "ftp",
+  // swimming & water sports
+  "swim", "swam", "swimming", "swimmer", "swimmers", "laps", "pool", "freestyle", "backstroke", "breaststroke",
+  "butterfly", "openwater", "surf", "surfer", "surfing", "paddle", "paddleboard", "kayak", "kayaking", "crew",
+  // mind-body, flexibility & dance
+  "yoga", "yogi", "yogis", "vinyasa", "hatha", "ashtanga", "yin", "bikram", "hotyoga", "asana", "flow",
+  "pilates", "reformer", "mat", "stretch", "stretching", "stretched", "mobility", "flexibility", "flexible",
+  "warm", "warmup", "cooldown", "posture", "alignment", "balance", "stability", "breathwork", "meditation",
+  "dance", "dancing", "dancer", "dancers", "choreo", "choreography", "zumba", "barre", "ballet", "ballerina",
+  "hiphop", "salsa", "bachata", "bharatanatyam", "kathak", "kuchipudi", "bollywood", "contemporary", "jazz", "tap",
+  // combat & martial arts
+  "box", "boxing", "boxer", "kickboxing", "kickboxer", "muaythai", "mma", "ufc", "martial", "karate",
+  "taekwondo", "judo", "bjj", "jiujitsu", "grappling", "wrestling", "wrestler", "sparring", "heavybag", "shadowbox",
+  // team, court & outdoor sports
+  "sport", "sports", "athlete", "athletes", "athletic", "athletics", "varsity", "intramural", "rec", "league",
+  "basketball", "hoops", "hooper", "soccer", "futbol", "football", "rugby", "lacrosse", "hockey", "baseball", "softball",
+  "tennis", "pickleball", "badminton", "squash", "racquetball", "pingpong", "tabletennis", "volleyball", "beach",
+  "cricket", "golf", "golfer", "golfing", "skate", "skating", "skateboard", "rollerblade", "iceskate",
+  "climb", "climbing", "climber", "climbers", "bouldering", "boulder", "belay", "toprope", "crag",
+  "ski", "skiing", "skier", "snowboard", "snowboarding", "snowshoe", "cross", "country",
+  // recovery, sleep & wellness
+  "rest", "restday", "recovery", "recover", "recovering", "sore", "soreness", "doms", "fatigue",
+  "sauna", "coldplunge", "icebath", "massage", "theragun", "physio", "pt", "rehab", "prehab", "injury",
+  "sleep", "sleeping", "slept", "circadian", "wellness", "health", "healthy", "active", "lifestyle", "longevity",
+  // goals, mindset & gym slang
+  "gains", "gainz", "shred", "shredded", "lean", "leaning", "bulk", "bulking", "cut", "cutting", "recomp",
+  "consistency", "consistent", "discipline", "disciplined", "dedication", "grind", "grinding", "hustle",
+  "mindset", "focus", "habit", "habits", "streak", "daily", "morning", "5am", "earlybird", "noexcuses",
+  "personal", "best", "progress", "transformation", "journey", "milestone", "milestones", "goal", "goals",
+  // food, macros & nutrition
+  "meal", "meals", "mealprep", "prep", "prepping", "prepped", "food", "foods", "fuel", "fueling", "fueled",
+  "protein", "proteins", "carbs", "carb", "carbohydrates", "fats", "fat", "lipids", "fiber", "macros", "macro", "micros",
+  "kcal", "calories", "calorie", "caloric", "deficit", "surplus", "maintenance", "tdee", "bmr",
+  "diet", "dieting", "dietary", "nutrition", "nutritious", "wholefoods", "clean", "cleaneating", "cheat", "cheatmeal", "refeed",
+  "breakfast", "lunch", "dinner", "snack", "snacks", "snacking", "ate", "eat", "eating", "fast", "fasting", "if",
+  "chicken", "breast", "turkey", "beef", "steak", "sirloin", "salmon", "tuna", "tilapia", "cod", "shrimp", "fish",
+  "egg", "eggs", "eggwhites", "tofu", "tempeh", "edamame", "lentils", "beans", "chickpeas", "quinoa",
+  "rice", "brownrice", "basmati", "oats", "oatmeal", "overnight", "pasta", "bread", "sourdough", "sweetpotato", "potato",
+  "broccoli", "spinach", "kale", "asparagus", "avocado", "veggies", "vegetables", "greens", "salad", "bowl",
+  "fruit", "fruits", "banana", "bananas", "berries", "blueberries", "strawberries", "apple", "apples",
+  "yogurt", "greek", "cottage", "cheese", "milk", "almond", "soy", "peanut", "butter", "nuts", "almonds", "chia",
+  "shake", "shakes", "smoothie", "smoothies", "whey", "casein", "isolate", "creatine", "bcaa", "eaa",
+  "preworkout", "pre", "postworkout", "electrolytes", "sodium", "potassium", "magnesium", "zinc", "vitamin", "vitamins",
+  "omega", "fishoil", "collagen", "caffeine", "espresso", "matcha", "hydrate", "hydration", "hydrated", "water", "gallon",
+  // body metrics & measurements
+  "weight", "weigh", "weighing", "weighin", "weighins", "scale", "lb", "lbs", "kg", "kgs", "pounds", "kilos",
+  "bodyweight", "waist", "chest", "hip", "hips", "thigh", "thighs", "neck", "inches", "cm", "bmi", "bodyfat", "bf",
+  // Spanish fitness & nutrition
+  "pierna", "piernas", "sentadilla", "sentadillas", "gimnasio", "entrenamiento", "entrenar",
+  "entreno", "rutina", "pesas", "levantar", "correr", "corredor", "corredora", "caminar", "nadar",
+  "comida", "comidas", "dieta", "nutricion", "proteina", "carbohidratos", "calorias", "agua",
+  "salud", "saludable", "fuerza", "cardio", "récord", "record", "progreso", "meta", "metas",
 ]);
 
 // Number patterns that are clearly lifting or tracking: 185x5, 3x10, 5k, 225lb, 250kcal, 10k
@@ -260,7 +329,24 @@ function moderateBio(bio) {
   return moderateText(bio, MAX_BIO_LENGTH);
 }
 
-// Comment / DM: must be non-empty, clean, no spam/links, max 500 chars (conversational replies allowed).
+
+const INSULT_WORDS = new Set([
+  "suck", "sucks", "sucked", "sucking", "loser", "losers", "idiot", "idiots",
+  "stupid", "dumb", "pathetic", "trash", "garbage", "ugly", "fat", "fatty",
+  "weakling", "quitter", "stfu", "kys",
+]);
+const INSULT_PHRASES = /\b(shut\s*up|kill\s+yourself)\b/i;
+
+function hasInsult(cleaned) {
+  if (INSULT_PHRASES.test(cleaned)) return true;
+  return cleaned.split(/\s+/).some((raw) => {
+    const plain = deLeet(raw.replace(/[._\-*]+/g, "")).replace(/[^\p{L}]/gu, "");
+    if (!plain) return false;
+    const squished = squish(plain).replace(/(ck){2,}/g, "ck");
+    return INSULT_WORDS.has(plain) || INSULT_WORDS.has(squished);
+  });
+}
+
 function moderateComment(text) {
   if (typeof text !== "string") return result(REASONS.INVALID_INPUT);
   const trimmed = text.trim();
@@ -268,6 +354,7 @@ function moderateComment(text) {
   if ([...trimmed].length > 500) return result(REASONS.TOO_LONG);
   const cleaned = clean(trimmed);
   if (hasProfanity(cleaned)) return result(REASONS.PROFANITY);
+  if (hasInsult(cleaned)) return result(REASONS.UNCIVIL);
   const tokens = words(cleaned);
   if (isSpam(cleaned, tokens)) return result(REASONS.SPAM);
   return result(REASONS.OK);
@@ -281,6 +368,7 @@ function moderateComment(text) {
 
 const MESSAGES = {
   profanity: "Please keep it clean. Your caption has language that isn't allowed.",
+  uncivil: "Please keep comments supportive and respectful.",
   spam: "Links, ads, and contact info aren't allowed in captions.",
   off_topic: "Keep captions about your fitness journey: workouts, food, steps, or progress.",
   too_long: `Captions can be up to ${MAX_CAPTION_LENGTH} characters.`,

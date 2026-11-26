@@ -11,10 +11,13 @@ import bcrypt from 'bcryptjs'
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 import { moderateCaption, moderateBio, moderateComment, MESSAGES, BIO_MESSAGES } from './moderation.js';
+import { searchWgerExercises, isValidWgerExercise, inspectExercise, searchFormVideos } from './exercises.js';
+import { makeRng, postsFor } from './demoPeople.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '200kb' })); // room for a small profile-photo data URL
+app.use('/avatars', express.static('public/avatars'));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -42,14 +45,15 @@ const User = mongoose.model('User', new mongoose.Schema({
   password: String,
   phone: String,
   calorieGoal: { type: Number, default: 2200 },
+  plan: { type: mongoose.Schema.Types.Mixed, default: null },
   role: { type: String, default: 'user' },
   isPublic: { type: Boolean, default: false },
   defaultAudience: { type: String, enum: AUDIENCES, default: 'FRIENDS' },
   avatarUrl: String,
   isDemo: { type: Boolean, default: false },
+  allowStatsIndexing: { type: Boolean, default: false },
+  dismissedSuggestions: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }));
-
-
 
 const StepLog = mongoose.model('StepLog', new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
@@ -59,15 +63,29 @@ const FoodLog = mongoose.model('FoodLog', new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   day: String, name: String, calories: Number, protein: Number, carbs: Number, fat: Number
 }));
+
 const WorkoutSession = mongoose.model('WorkoutSession', new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-  exercise: String, name: String, weight: Number, reps: Number, sets: Number, createdAt: { type: Date, default: Date.now }
+  exercise: String,
+  name: String,
+  activityType: { type: String, default: 'strength' }, // 'weighted_strength' | 'bodyweight_strength' | 'cardio_speed' | 'movement_duration'
+  weight: Number,
+  reps: Number,
+  sets: Number,
+  minutes: Number,
+  speedMph: Number,
+  createdAt: { type: Date, default: Date.now },
 }));
+
+const WorkoutPreset = mongoose.model('WorkoutPreset', new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  name: String,
+}));
+
 const BodyMetric = mongoose.model('BodyMetric', new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   day: String, weight: Number, waist: Number, chest: Number, hip: Number, arm: Number, thigh: Number
 }));
-
 
 const Post = mongoose.model('Post', new mongoose.Schema({
   authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
@@ -84,6 +102,7 @@ const Post = mongoose.model('Post', new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }));
 
+Post.collection.createIndex({ createdAt: -1 }).catch(() => {});
 
 // One document per PAIR of users, whichever direction the request went (see pairKey in visibility.js).
 //   PENDING = `requester` asked, the other person hasn't answered. FRIENDS = accepted.
@@ -106,6 +125,27 @@ const messageSchema = new mongoose.Schema({
 });
 messageSchema.index({ pairKey: 1, createdAt: -1 });
 const Message = mongoose.model('Message', messageSchema);
+
+const Story = mongoose.model('Story', new mongoose.Schema({
+  authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true, required: true },
+  audience: { type: String, enum: ['FRIENDS', 'PUBLIC'], default: 'FRIENDS' },
+  text: { type: String, default: '' },
+  photo: { data: Buffer, contentType: String },
+  hasPhoto: { type: Boolean, default: false },
+  viewers: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    username: String,
+    viewedAt: { type: Date, default: Date.now },
+  }],
+  reactions: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    username: String,
+    emoji: String,
+  }],
+  createdAt: { type: Date, default: Date.now, expires: 86400 },
+}));
+Story.collection.createIndex({ createdAt: -1 }).catch(() => {});
+
 
 // Older posts were saved with only author.username; give them an authorId once the DB is up.
 mongoose.connection.once('open', async () => {
@@ -151,6 +191,21 @@ async function checkPhoto(file) {
     return { outcome: 'review', note: 'CV service offline - saved for manual mod review' };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function isSupportiveText(text) {
+  try {
+    const r = await fetch(`${CV_URL}/classify-comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    return Boolean(d.allowed);
+  } catch {
+    return false;
   }
 }
 
@@ -326,8 +381,9 @@ const toPublicUser = (u) => ({
   avatarUrl: u.avatarUrl || null,
   isPublic: Boolean(u.isPublic),
   defaultAudience: u.defaultAudience || 'FRIENDS',
+  allowStatsIndexing: Boolean(u.allowStatsIndexing),
 });
-const PROFILE_FIELDS = 'username displayName bio email calorieGoal avatarUrl isPublic defaultAudience';
+const PROFILE_FIELDS = 'username displayName bio email calorieGoal plan avatarUrl isPublic defaultAudience allowStatsIndexing';
 const signToken = (u) => jwt.sign({ sub: String(u._id) }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES || '7d' });
 
 async function requireAuth(req, res, next) {
@@ -404,8 +460,9 @@ app.post('/api/auth/register', async (req, res) => {
 
     const rawGoal = Number(req.body?.calorieGoal);
     const calorieGoal = Number.isFinite(rawGoal) && rawGoal >= 1000 && rawGoal <= 6000 ? Math.round(rawGoal) : 2200;
+    const plan = req.body?.plan && typeof req.body.plan === 'object' ? req.body.plan : null;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const u = await User.create({ email, username, displayName, password: hashedPassword, phone: phone || undefined, calorieGoal });
+    const u = await User.create({ email, username, displayName, password: hashedPassword, phone: phone || undefined, calorieGoal, plan });
     res.status(201).json({ token: signToken(u), user: toPublicUser(u) });
   } catch (err) {
     console.error('register failed:', err);
@@ -608,6 +665,7 @@ app.patch('/api/me', requireAuth, async (req, res) => {
     set.displayName = name;
   }
   if (b.isPublic !== undefined) set.isPublic = b.isPublic === true;
+  if (b.allowStatsIndexing !== undefined) set.allowStatsIndexing = b.allowStatsIndexing === true;
   if (b.defaultAudience !== undefined) {
     if (!AUDIENCES.includes(b.defaultAudience)) return res.status(400).json({ error: 'Unknown audience.' });
     set.defaultAudience = b.defaultAudience;
@@ -617,17 +675,19 @@ app.patch('/api/me', requireAuth, async (req, res) => {
       if (!isValidAvatar(b.avatarUrl)) {
         return res.status(400).json({ error: 'That photo is too large or not a JPEG/PNG/WebP image.' });
       }
+      
       const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(b.avatarUrl);
       if (m) {
-        const cv = await checkPhoto({
-          buffer: Buffer.from(m.at(2), 'base64'),
-          mimetype: m.at(1),
-          originalname: 'avatar.jpg',
-        });
-        if (cv.outcome !== 'approved') {
+        const fd = new FormData();
+        fd.append('file', new Blob([Buffer.from(m.at(2), 'base64')], { type: m.at(1) }), 'avatar.jpg');
+        const headers = process.env.CV_TOKEN ? { 'x-cv-token': process.env.CV_TOKEN } : {};
+        const r = await fetch(`${CV_URL}/classify-avatar`, { method: 'POST', body: fd, headers }).catch(() => null);
+        const d = r && r.ok ? await r.json().catch(() => ({})) : null;
+        if (!d?.approved) {
           return res.status(422).json({ error: 'Please upload an appropriate fitness/workout profile photo.' });
         }
       }
+
     }
     set.avatarUrl = b.avatarUrl;
   }
@@ -659,6 +719,26 @@ app.post('/api/me/password', requireAuth, async (req, res) => {
 });
 
 
+app.delete('/api/me', requireAuth, async (req, res) => {
+  const me = req.user._id;
+  await Promise.all([
+    StepLog.deleteMany({ userId: me }),
+    FoodLog.deleteMany({ userId: me }),
+    WorkoutSession.deleteMany({ userId: me }),
+    WorkoutPreset.deleteMany({ userId: me }),
+    BodyMetric.deleteMany({ userId: me }),
+    Post.deleteMany({ authorId: me }),
+    Post.updateMany({}, { $pull: { comments: { authorId: me } } }),
+    Story.deleteMany({ authorId: me }),
+    Friendship.deleteMany({ users: me }),
+    Message.deleteMany({ $or: [{ senderId: me }, { recipientId: me }] }),
+    Report.deleteMany({ $or: [{ reporterId: me }, { targetUserId: me }] }),
+    User.deleteOne({ _id: me }),
+  ]);
+  res.json({ ok: true });
+});
+
+
 // Today (Steps & Nutrition)
 app.get('/api/steps', requireAuth, async (req, res) => {
   const doc = await StepLog.findOne({ userId: req.user._id, day: req.query.day });
@@ -676,13 +756,23 @@ app.post('/api/steps', requireAuth, async (req, res) => {
   );
   res.json({ steps: doc.steps, goal: 10000 });
 });
+
 app.get('/api/nutrition', requireAuth, async (req, res) => {
   const entries = await FoodLog.find({ userId: req.user._id, day: req.query.day });
   const totals = entries.reduce((a, b) => ({
     calories: a.calories + (b.calories || 0), protein: a.protein + (b.protein || 0), carbs: a.carbs + (b.carbs || 0), fat: a.fat + (b.fat || 0)
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
-  res.json({ entries, foods: BUILTIN_FOODS, totals, goal: req.user.calorieGoal || 2200 });
+  res.json({
+    entries,
+    foods: BUILTIN_FOODS,
+    totals,
+    goal: req.user.calorieGoal || 2200,
+    goalSource: req.user.plan ? 'plan' : 'default',
+    plan: req.user.plan || null,
+    profile: req.user.plan || null,
+  });
 });
+
 app.post('/api/nutrition/goal', requireAuth, async (req, res) => {
   const goal = Number(req.body.goal);
   if (!Number.isFinite(goal) || goal < 1000 || goal > 6000) {
@@ -787,6 +877,7 @@ app.put('/api/profile', requireAuth, async (req, res) => {
     calorieGoal = Math.max(1200, Math.min(5000, tdee + (usedGoal === 'lose' ? -400 : usedGoal === 'gain' ? 300 : 0)));
     set.calorieGoal = calorieGoal;
     plan = { bmi, category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese', goalUsed: usedGoal };
+    set.plan = { ...plan, age: Number(age), heightIn: Number(heightIn), weightLb: Number(weightLb), sex, activity, goal };
   }
 
   if (!Object.keys(set).length) return res.status(400).json({ error: 'Nothing to update.' });
@@ -812,31 +903,118 @@ app.delete('/api/nutrition/today', requireAuth, async (req, res) => {
 });
 
 // Workouts & Presets
+app.get('/api/exercises/search', requireAuth, async (req, res) => {
+  res.json({ exercises: await searchWgerExercises(req.query.q) });
+});
+
+app.get('/api/exercises/videos', requireAuth, async (req, res) => {
+  const exercise = String(req.query.exercise || '').trim();
+  const focus = String(req.query.focus || 'proper form tutorial').trim();
+  if (!exercise || !moderateComment(exercise).allowed) {
+    return res.status(400).json({ error: 'Select a valid workout activity first.' });
+  }
+  res.json(await searchFormVideos(exercise, focus));
+});
+
 app.get('/api/sessions', requireAuth, async (req, res) => res.json({ sessions: await WorkoutSession.find({ userId: req.user._id }).sort({ createdAt: -1 }) }));
+
+app.get('/api/exercises/inspect', requireAuth, async (req, res) => {
+  const exercise = String(req.query.exercise || '').trim();
+  if (!exercise) return res.json({ valid: false, mode: 'weighted_strength', requiresWeight: true });
+  res.json(await inspectExercise(exercise));
+});
+
 app.post('/api/sessions', requireAuth, async (req, res) => {
+  const exercise = String(req.body.exercise || '').trim();
+  if (!moderateComment(exercise).allowed) {
+    return res.status(400).json({ error: 'Please enter a clean, appropriate exercise name.' });
+  }
+  const info = await inspectExercise(exercise);
+  if (!info.valid) {
+    return res.status(400).json({ error: `"${exercise}" was not recognized as a workout or physical activity.` });
+  }
+
   const weight = Number(req.body.weight || 0);
   const reps = Number(req.body.reps || 0);
   const sets = Number(req.body.sets || 0);
+  const minutes = Number(req.body.minutes || 0);
+  const speedMph = Number(req.body.speedMph || 0);
+  const mode = info.mode || 'weighted_strength';
+
+  if (mode === 'cardio_speed' || mode === 'movement_duration') {
+    if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 600) {
+      return res.status(400).json({ error: `Enter duration in minutes (1–600) for ${exercise}.` });
+    }
+    if (speedMph < 0 || speedMph > 40) {
+      return res.status(400).json({ error: 'Speed must be between 0 and 40 mph.' });
+    }
+    const session = await WorkoutSession.create({
+      userId: req.user._id, exercise, activityType: mode, minutes, speedMph: speedMph || undefined,
+    });
+    return res.status(201).json({ session, isPR: false });
+  }
+
+  if (info.requiresWeight && weight <= 0) {
+    return res.status(400).json({ error: `${exercise} uses weights — please enter Weight (lb).` });
+  }
   if (weight < 0 || weight > 2000 || reps <= 0 || reps > 500 || sets <= 0 || sets > 100) {
     return res.status(400).json({ error: 'Enter realistic weight (0–2000), reps (1–500), and sets (1–100).' });
   }
-  const prevBest = await WorkoutSession.findOne({ userId: req.user._id, exercise: req.body.exercise }).sort({ weight: -1 });
-  const isPR = !prevBest || weight > (prevBest.weight || 0);
-  const session = await WorkoutSession.create({ ...req.body, userId: req.user._id, weight, reps, sets });
+
+  const prevBest = await WorkoutSession.findOne({ userId: req.user._id, exercise }).sort({ weight: -1 });
+  const isPR = weight > 0 && (!prevBest || weight > (prevBest.weight || 0));
+  const session = await WorkoutSession.create({ userId: req.user._id, exercise, activityType: mode, weight, reps, sets });
   res.status(201).json({ session, isPR });
 });
-app.get('/api/presets', requireAuth, (req, res) => res.json({
-  presets: [
-    { id: 'p1', name: 'Push Day (Bench, OHP, Triceps)' },
-    { id: 'p2', name: 'Pull Day (Deadlift, Rows, Curls)' },
-    { id: 'p3', name: 'Leg Day (Squat, RDL, Calf Raises)' }
-  ]
-}));
-app.post('/api/presets/:id/start', requireAuth, async (req, res) => {
-  const names = { p1: 'Push Day', p2: 'Pull Day', p3: 'Leg Day' };
-  await WorkoutSession.create({ userId: req.user._id, name: names[req.params.id] || 'Preset Workout' });
+
+app.delete('/api/sessions/:id', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Workout not found.' });
+  await WorkoutSession.deleteOne({ _id: req.params.id, userId: req.user._id });
   res.json({ ok: true });
 });
+
+app.delete('/api/sessions', requireAuth, async (req, res) => {
+  await WorkoutSession.deleteMany({ userId: req.user._id });
+  res.json({ ok: true });
+});
+
+const DEFAULT_PRESETS = [
+  { id: 'p1', name: 'Push Day (Bench, OHP, Triceps)' },
+  { id: 'p2', name: 'Pull Day (Deadlift, Rows, Curls)' },
+  { id: 'p3', name: 'Leg Day (Squat, RDL, Calf Raises)' },
+];
+
+app.get('/api/presets', requireAuth, async (req, res) => {
+  const custom = await WorkoutPreset.find({ userId: req.user._id }).lean();
+  res.json({ presets: [...DEFAULT_PRESETS, ...custom.map((c) => ({ id: String(c._id), name: c.name, custom: true }))] });
+});
+
+app.post('/api/presets', requireAuth, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  if (!name || name.length > 60 || !moderateComment(name).allowed) {
+    return res.status(400).json({ error: 'Enter a clean preset name (1–60 chars).' });
+  }
+  const p = await WorkoutPreset.create({ userId: req.user._id, name });
+  res.status(201).json({ id: String(p._id), name: p.name, custom: true });
+});
+
+app.delete('/api/presets/:id', requireAuth, async (req, res) => {
+  if (mongoose.isValidObjectId(req.params.id)) {
+    await WorkoutPreset.deleteOne({ _id: req.params.id, userId: req.user._id });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/presets/:id/start', requireAuth, async (req, res) => {
+  const built = DEFAULT_PRESETS.find((p) => p.id === req.params.id);
+  const custom = !built && mongoose.isValidObjectId(req.params.id)
+    ? await WorkoutPreset.findOne({ _id: req.params.id, userId: req.user._id }).lean()
+    : null;
+  const label = built?.name || custom?.name || 'Preset Workout';
+  await WorkoutSession.create({ userId: req.user._id, exercise: label, name: label });
+  res.json({ ok: true, name: label });
+});
+
 
 // Body Metrics
 app.get('/api/body', requireAuth, async (req, res) => res.json({ entries: await BodyMetric.find({ userId: req.user._id }).sort({ _id: -1 }) }));
@@ -849,16 +1027,54 @@ app.post('/api/body', requireAuth, async (req, res) => {
   res.status(201).json(entry);
 });
 
+app.delete('/api/body/:id', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Entry not found.' });
+  await BodyMetric.deleteOne({ _id: req.params.id, userId: req.user._id });
+  res.json({ ok: true });
+});
+
+async function computeFitnessQuirks(userDocs) {
+  const map = new Map();
+  const optedIn = userDocs.filter((u) => u && u.allowStatsIndexing);
+  if (!optedIn.length) return map;
+  const ids = optedIn.map((u) => u._id);
+
+  const [topLifts, topSteps] = await Promise.all([
+    WorkoutSession.aggregate([
+      { $match: { userId: { $in: ids }, weight: { $gt: 0 } } },
+      { $sort: { weight: -1 } },
+      { $group: { _id: '$userId', exercise: { $first: '$exercise' }, weight: { $first: '$weight' } } },
+    ]),
+    StepLog.aggregate([
+      { $match: { userId: { $in: ids }, steps: { $gt: 0 } } },
+      { $group: { _id: '$userId', maxSteps: { $max: '$steps' } } },
+    ]),
+  ]);
+
+  const liftById = new Map(topLifts.map((r) => [String(r._id), r]));
+  const stepById = new Map(topSteps.map((r) => [String(r._id), r]));
+
+  for (const u of optedIn) {
+    const k = String(u._id);
+    const lift = liftById.get(k);
+    const step = stepById.get(k);
+    if (lift) map.set(k, `${lift.exercise} PR: ${lift.weight} lb`);
+    else if (step) map.set(k, `Peak Day: ${Number(step.maxSteps).toLocaleString()} steps`);
+    else map.set(k, 'Yet to hit the gym');
+  }
+  return map;
+}
+
 // ---------------- Friends ----------------
 const stateFor = (f, meId) => (!f ? 'NONE' : f.status === 'FRIENDS' ? 'FRIENDS' : String(f.requester) === String(meId) ? 'REQUEST_SENT' : 'REQUEST_RECEIVED');
-const brief = (u) => ({ id: String(u._id), username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl || null });
+const brief = (u) => ({ id: String(u._id), username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl || null, isPublic: Boolean(u.isPublic) });
 const friendIdsOf = async (meId) => (await Friendship.find({ users: meId, status: 'FRIENDS' }, 'users').lean())
   .map((f) => f.users.find((id) => String(id) !== String(meId)));
 const areFriends = async (a, b) => Boolean(await Friendship.exists({ pairKey: pairKey(a, b), status: 'FRIENDS' }));
 
 app.get('/api/friends', requireAuth, async (req, res) => {
   const me = req.user._id;
-  const rows = await Friendship.find({ users: me }).populate('users', 'username displayName avatarUrl').lean();
+  const rows = await Friendship.find({ users: me }).populate('users', 'username displayName avatarUrl isPublic').lean();
   const out = { friends: [], incoming: [], outgoing: [] };
   for (const f of rows) {
     const other = f.users.find((u) => u && String(u._id) !== String(me));
@@ -873,8 +1089,11 @@ app.get('/api/friends', requireAuth, async (req, res) => {
 
 app.get('/api/friends/suggested', requireAuth, async (req, res) => {
   const me = req.user._id;
-  const rels = await Friendship.find({ users: me }, 'users').lean();
-  const exclude = [me, ...rels.flatMap((r) => r.users)];
+  const [rels, meDoc] = await Promise.all([
+    Friendship.find({ users: me }, 'users').lean(),
+    User.findById(me, 'dismissedSuggestions').lean(),
+  ]);
+  const exclude = [me, ...rels.flatMap((r) => r.users), ...(meDoc?.dismissedSuggestions || [])];
   const users = await User.find(
     { _id: { $nin: exclude }, $or: [{ isDemo: { $ne: true } }, { isPublic: true }] },
     'username displayName avatarUrl bio isPublic isDemo'
@@ -888,25 +1107,66 @@ app.get('/api/friends/suggested', requireAuth, async (req, res) => {
   });
 });
 
+app.post('/api/friends/suggested/:id/dismiss', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'User not found.' });
+  await User.findByIdAndUpdate(req.user._id, { $addToSet: { dismissedSuggestions: id } });
+  res.json({ ok: true });
+});
+
 // Searches username AND displayName (case-insensitive, partial match).
 // `bio` is only included when the person's profile is public or you're already friends.
+
 app.get('/api/friends/search', requireAuth, async (req, res) => {
   const q = String(req.query.q || '').trim().replace(/^@/, '');
+  const mode = req.query.mode === 'quirk' ? 'quirk' : 'name';
   if (q.length < 2) return res.json({ users: [] });
   const me = req.user._id;
   const rx = new RegExp(escapeRegExp(q), 'i');
   const lower = q.toLowerCase();
-  const rank = (u) => ((u.username || '').toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
-  const found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me } }, 'username displayName avatarUrl bio isPublic').limit(100).lean())
-    .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
-    .slice(0, 20);
-  const rels = await Friendship.find({ users: me, pairKey: { $in: found.map((u) => pairKey(me, u._id)) } }).lean();
+
+  let found = [];
+  if (mode === 'quirk') {
+    const bioHits = await User.find(
+      { _id: { $ne: me }, isPublic: true, bio: rx },
+      'username displayName avatarUrl bio isPublic allowStatsIndexing'
+    ).limit(20).lean();
+    if (bioHits.length >= 20) {
+      found = bioHits;
+    } else {
+      const excludeIds = [me, ...bioHits.map((u) => u._id)];
+      const candidates = await User.find(
+        { _id: { $nin: excludeIds }, allowStatsIndexing: true },
+        'username displayName avatarUrl bio isPublic allowStatsIndexing'
+      ).limit(150).lean();
+      const candQuirks = await computeFitnessQuirks(candidates);
+      const prHits = candidates.filter((u) => rx.test(candQuirks.get(String(u._id)) || ''));
+      found = [...bioHits, ...prHits].slice(0, 20);
+    }
+  } else {
+
+    const rank = (u) => ((u.username || '').toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
+    found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me } }, 'username displayName avatarUrl bio isPublic allowStatsIndexing').limit(100).lean())
+      .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
+      .slice(0, 20);
+  }
+
+  const [rels, quirks] = await Promise.all([
+    Friendship.find({ users: me, pairKey: { $in: found.map((u) => pairKey(me, u._id)) } }).lean(),
+    computeFitnessQuirks(found),
+  ]);
+
   const byKey = new Map(rels.map((f) => [f.pairKey, f]));
   res.json({
     users: found.map((u) => {
       const state = stateFor(byKey.get(pairKey(me, u._id)), me);
       const canSeeBio = Boolean(u.isPublic) || state === 'FRIENDS';
-      return { ...brief(u), ...(canSeeBio ? { bio: u.bio || '' } : {}), state };
+      return {
+        ...brief(u),
+        ...(canSeeBio ? { bio: u.bio || '' } : {}),
+        ...(quirks.has(String(u._id)) ? { fitnessQuirk: quirks.get(String(u._id)) } : {}),
+        state,
+      };
     }),
   });
 });
@@ -1002,6 +1262,11 @@ app.post('/api/messages/:friendId', requireAuth, async (req, res) => {
       return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Use appropriate language.', reason: verdict.reason });
     }
 
+    if (!(await isSupportiveText(text))) {
+      return res.status(400).json({ error: MESSAGES.uncivil, reason: 'uncivil' });
+    }
+
+
     const message = await Message.create({
       pairKey: pairKey(me, friendId),
       senderId: me,
@@ -1015,31 +1280,163 @@ app.post('/api/messages/:friendId', requireAuth, async (req, res) => {
   }
 });
 
-// ---------------- Feed (privacy-filtered: Home + Discover) ----------------
+app.delete('/api/messages/:friendId', requireAuth, async (req, res) => {
+  const { friendId } = req.params;
+  if (!mongoose.isValidObjectId(friendId)) return res.status(404).json({ error: 'User not found.' });
+  await Message.deleteMany({ pairKey: pairKey(req.user._id, friendId) });
+  res.json({ ok: true });
+});
+
+app.post('/api/friends/:id/block', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'User not found.' });
+  const key = pairKey(req.user._id, id);
+  await Promise.all([
+    Friendship.deleteOne({ pairKey: key }),
+    Message.deleteMany({ pairKey: key }),
+  ]);
+  res.json({ ok: true, blocked: true });
+});
+
+const Report = mongoose.models.Report || mongoose.model('Report', new mongoose.Schema({
+  reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  reporterUsername: String,
+  targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  targetUsername: String,
+  reason: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'resolved', 'dismissed'], default: 'pending' },
+  createdAt: { type: Date, default: Date.now },
+}));
+app.post('/api/reports', requireAuth, async (req, res) => {
+  const { targetUserId, targetUsername, reason } = req.body || {};
+  const cleanReason = String(reason || '').trim();
+  if (!cleanReason || cleanReason.length < 3) {
+    return res.status(400).json({ error: 'Please explain why you are reporting this account.' });
+  }
+  const verdict = moderateComment(cleanReason);
+  if (!verdict.allowed) {
+    return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Keep report descriptions clean and respectful.' });
+  }
+
+  await Report.create({
+    reporterId: req.user._id,
+    reporterUsername: req.user.username,
+    targetUserId,
+    targetUsername: String(targetUsername || '').trim(),
+    reason: cleanReason.slice(0, 400),
+  });
+  if (mongoose.isValidObjectId(targetUserId)) {
+    const key = pairKey(req.user._id, targetUserId);
+    await Promise.all([
+      Friendship.deleteOne({ pairKey: key }),
+      Message.deleteMany({ pairKey: key }),
+      User.findByIdAndUpdate(req.user._id, { $addToSet: { dismissedSuggestions: targetUserId } }),
+    ]);
+  }
+  res.status(201).json({ ok: true });
+});
+
+app.get('/api/reports', requireAuth, async (req, res) => {
+  const rows = await Report.find({ status: 'pending' }).sort({ createdAt: -1 }).limit(50).lean();
+  res.json({ reports: rows });
+});
+
+app.patch('/api/reports/:id', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  const status = req.body?.status === 'dismissed' ? 'dismissed' : 'resolved';
+  await Report.findByIdAndUpdate(req.params.id, { $set: { status } });
+  res.json({ ok: true });
+});
+
+// ---------------- Feed (privacy-filtered: Home + Discover + Infinite Scroll + 20s Pulse) ----------------
+let lastDiscoverPulseAt = 0;
+
 app.get('/api/feed', requireAuth, async (req, res) => {
   const me = req.user._id;
   const scope = req.query.scope === 'discover' ? 'discover' : 'friends';
-  const filter = feedFilter(me, scope === 'friends' ? await friendIdsOf(me) : [], scope);
-  const posts = await Post.find(filter, { photo: 0 }).sort({ createdAt: -1 }).limit(60).lean();
+  const limit = Math.min(30, Math.max(5, parseInt(req.query.limit, 10) || 15));
+  const before = req.query.before ? new Date(String(req.query.before)) : null;
+
+  if (scope === 'discover' && !before && Date.now() - lastDiscoverPulseAt >= 20000) {
+    lastDiscoverPulseAt = Date.now();
+    const newestDemo = await Post.findOne({ audience: 'PUBLIC', authorPublic: true }, 'createdAt').sort({ createdAt: -1 }).lean();
+    if (!newestDemo || Date.now() - new Date(newestDemo.createdAt).getTime() >= 20000) {
+    const MALE_FIRST = new Set([
+    'Liam', 'Noah', 'Ethan', 'Mason', 'Lucas', 'Logan', 'Caleb', 'Nathan', 'Ryan', 'Dylan',
+    'Aiden', 'Jack', 'Owen', 'Gabriel', 'Carter', 'Julian', 'Mateo', 'Leo', 'Isaac', 'Daniel',
+    'Henry', 'Miles', 'Gavin', 'Evan', 'Lukas', 'Soren', 'Matteo', 'Sebastian', 'Henrik', 'Nico',
+    'Kenji', 'Hiroshi', 'Minho', 'Jihoon', 'Wei', 'Jun', 'Bao', 'Minh', 'Haruto', 'Ren',
+    'Kaito', 'Seojun', 'Doyoon', 'Hao', 'Zhi', 'Tuan', 'Riku', 'Hyun', 'Cheng', 'Daiki',
+    'Arjun', 'Rohan', 'Dev', 'Samir', 'Kabir', 'Aarav', 'Vikram', 'Nikhil', 'Siddharth', 'Karan',
+    'Kwame', 'Kofi', 'Tariq', 'Malik', 'Idris', 'Chidi', 'Tunde', 'Zuri', 'Jelani', 'Jabari',
+    ]);
+
+      const demoAuthors = await User.find({ isDemo: true, isPublic: true }, '_id username displayName isPublic').limit(80).lean();
+      const [manPool, womanPool] = await Promise.all([
+        Post.find({ isSeededPhoto: true, gender: 'man' }, 'photo text').limit(127).lean(),
+        Post.find({ isSeededPhoto: true, gender: 'woman' }, 'photo text').limit(127).lean(),
+      ]);
+      if (demoAuthors.length > 0) {
+        const rng = makeRng(`pulse-${Date.now()}`);
+        const fresh = [];
+        for (let i = 0; i < 12; i++) {
+          const author = demoAuthors[Math.floor(rng() * demoAuthors.length)];
+          const isMan = MALE_FIRST.has((author.displayName || '').split(' ')[0]);
+          const pool = isMan ? manPool : womanPool;
+          const [sample] = postsFor({ username: author.username, isPublic: true }, rng, Date.now(), demoAuthors);
+          const picked = pool.length && i % 2 === 0 ? pool[Math.floor(rng() * pool.length)] : null;
+          if (sample) {
+            fresh.push({
+              authorId: author._id,
+              author: { username: author.username },
+              audience: 'PUBLIC',
+              text: picked ? picked.text : sample.text,
+              comments: [],
+              cvStatus: picked ? 'approved' : null,
+              photoStatus: picked ? 'approved' : 'none',
+              ...(picked ? { photo: picked.photo } : {}),
+              authorPublic: true,
+              createdAt: new Date(Date.now() - Math.floor(rng() * 5000)),
+            });
+          }
+        }
+        if (fresh.length) await Post.insertMany(fresh).catch(() => {});
+      }
+
+    }
+  }
+
+  const filter = {
+    ...feedFilter(me, scope === 'friends' ? await friendIdsOf(me) : [], scope),
+    ...(before && !Number.isNaN(before.getTime()) ? { createdAt: { $lt: before } } : {}),
+  };
+  const raw = await Post.find(filter, { photo: 0 }).sort({ createdAt: -1 }).limit(limit + 1).lean();
+  const hasMore = raw.length > limit;
+  const posts = hasMore ? raw.slice(0, limit) : raw;
 
   const ids = [...new Set(posts.map((p) => p.authorId).filter(Boolean).map(String))];
   const authors = ids.length ? await User.find({ _id: { $in: ids } }, 'username displayName avatarUrl').lean() : [];
   const byId = new Map(authors.map((a) => [String(a._id), a]));
+  const mapped = posts.map(({ authorId, authorPublic, ...p }) => {
+    const a = byId.get(String(authorId));
+    return {
+      ...p,
+      mine: String(authorId) === String(me),
+      author: { username: a?.username || p.author?.username, displayName: a?.displayName, avatarUrl: a?.avatarUrl || null },
+      hasPhoto: p.photoStatus !== 'none',
+      photoUrl: p.photoStatus !== 'none' ? `/api/feed/${p._id}/photo` : null,
+      comments: (p.comments || []).map((c) => ({ ...c, mine: String(c.authorId) === String(me) })),
+    };
+  });
+
   res.json({
     scope,
-    posts: posts.map(({ authorId, authorPublic, ...p }) => {
-      const a = byId.get(String(authorId));
-      return {
-        ...p,
-        mine: String(authorId) === String(me),
-        author: { username: a?.username || p.author?.username, displayName: a?.displayName, avatarUrl: a?.avatarUrl || null },
-        hasPhoto: p.photoStatus !== 'none',
-        photoUrl: p.photoStatus !== 'none' ? `/api/feed/${p._id}/photo` : null,
-        comments: (p.comments || []).map((c) => ({ ...c, mine: String(c.authorId) === String(me) }))
-      };
-    }),
+    posts: mapped,
+    hasMore,
+    nextCursor: mapped.length ? mapped[mapped.length - 1].createdAt : null,
   });
 });
+
 
 app.get('/api/feed/:id/photo', requireAuth, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
@@ -1127,6 +1524,10 @@ app.post('/api/feed/:id/comments', requireAuth, async (req, res) => {
   const verdict = moderateComment(text);
   if (!verdict.allowed) return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Keep comments clean and fitness-related.' });
 
+  if (!(await isSupportiveText(text))) {
+    return res.status(400).json({ error: MESSAGES.uncivil });
+  }
+
   post.comments.push({ authorId: req.user._id, author: { username: req.user.username }, text });
   await post.save();
   const saved = post.comments[post.comments.length - 1];
@@ -1146,6 +1547,193 @@ app.delete('/api/feed/:id/comments/:cid', requireAuth, async (req, res) => {
   await post.save();
   res.json({ ok: true });
 });
+
+// ---------------- Instagram-style User Profile Lookup ----------------
+app.get('/api/users/:username/profile', requireAuth, async (req, res) => {
+  const uname = String(req.params.username || '').trim().replace(/^@/, '');
+  const target = await User.findOne({ username: new RegExp(`^${escapeRegExp(uname)}$`, 'i') }, 'username displayName bio avatarUrl isPublic allowStatsIndexing').lean();
+  if (!target) return res.status(404).json({ error: 'User not found.' });
+
+  const me = req.user._id;
+  const isSelf = String(target._id) === String(me);
+  const f = isSelf ? null : await Friendship.findOne({ pairKey: pairKey(me, target._id) }).lean();
+  const state = isSelf ? 'SELF' : stateFor(f, me);
+  const canView = isSelf || Boolean(target.isPublic) || state === 'FRIENDS';
+  const quirks = await computeFitnessQuirks([target]);
+
+  let posts = [];
+  
+    if (canView) {
+    const allowedAudiences = isSelf ? ['PRIVATE', 'FRIENDS', 'PUBLIC'] : state === 'FRIENDS' ? ['FRIENDS', 'PUBLIC'] : ['PUBLIC'];
+    const raw = await Post.find(
+      { authorId: target._id, audience: { $in: allowedAudiences }, ...(isSelf ? {} : { photoStatus: { $in: ['none', 'approved'] } }) },
+      { photo: 0 }
+    ).sort({ createdAt: -1 }).limit(20).lean();
+    posts = raw.map(({ authorId, authorPublic, ...p }) => ({
+      ...p,
+      hasPhoto: p.photoStatus !== 'none',
+      photoUrl: p.photoStatus !== 'none' ? `/api/feed/${p._id}/photo` : null,
+      comments: (p.comments || []).map((c) => ({ ...c, mine: String(c.authorId) === String(me) })),
+    }));
+  }
+
+  res.json({
+    user: {
+      id: String(target._id),
+      username: target.username,
+      displayName: target.displayName || target.username,
+      bio: canView ? (target.bio || '') : '',
+      fitnessQuirk: quirks.get(String(target._id)) || null,
+      avatarUrl: target.avatarUrl || null,
+      isPublic: Boolean(target.isPublic),
+    },
+    state,
+    canView,
+    posts,
+  });
+});
+
+// ---------------- 24-Hour Stories (FR-23..FR-26 + Viewers List) ----------------
+app.get('/api/stories/mine', requireAuth, async (req, res) => {
+  const rows = await Story.find({ authorId: req.user._id }, { photo: 0 }).sort({ createdAt: -1 }).lean();
+  res.json({
+    stories: rows.map((s) => ({
+      id: String(s._id),
+      audience: s.audience || 'FRIENDS',
+      text: s.text,
+      hasPhoto: Boolean(s.hasPhoto),
+      photoUrl: s.hasPhoto ? `/api/stories/${s._id}/photo` : null,
+      viewers: (s.viewers || []).map((v) => ({ username: v.username, viewedAt: v.viewedAt })),
+      reactions: (s.reactions || []).map((r) => ({ username: r.username, emoji: r.emoji })),
+      createdAt: s.createdAt,
+    })),
+  });
+});
+
+app.get('/api/stories/feed', requireAuth, async (req, res) => {
+  const me = req.user._id;
+  const fIds = await friendIdsOf(me);
+  const rows = await Story.find(
+    {
+      $or: [
+        { authorId: me },
+        { authorId: { $in: fIds }, audience: { $in: ['FRIENDS', 'PUBLIC'] } },
+        { audience: 'PUBLIC' },
+      ],
+    },
+    { photo: 0 }
+  ).sort({ createdAt: -1 }).limit(120).lean();
+
+  const authorIds = [...new Set(rows.map((r) => String(r.authorId)))];
+  const authors = authorIds.length
+    ? await User.find({ _id: { $in: authorIds } }, 'username displayName avatarUrl isPublic').lean()
+    : [];
+  const byId = new Map(authors.map((a) => [String(a._id), a]));
+
+  res.json({
+    stories: rows.map((s) => {
+      const a = byId.get(String(s.authorId));
+      const mine = String(s.authorId) === String(me);
+      return {
+        id: String(s._id),
+        mine,
+        audience: s.audience || 'FRIENDS',
+        author: {
+          id: String(s.authorId),
+          username: a?.username || 'user',
+          displayName: a?.displayName || a?.username || 'User',
+          avatarUrl: a?.avatarUrl || null,
+        },
+        text: s.text,
+        hasPhoto: Boolean(s.hasPhoto),
+        photoUrl: s.hasPhoto ? `/api/stories/${s._id}/photo` : null,
+        viewers: mine ? (s.viewers || []).map((v) => ({ username: v.username, viewedAt: v.viewedAt })) : undefined,
+        viewedByMe: (s.viewers || []).some((v) => String(v.userId) === String(me)),
+        reactions: (s.reactions || []).map((r) => ({ username: r.username, emoji: r.emoji })),
+        createdAt: s.createdAt,
+      };
+    }),
+  });
+});
+
+app.post('/api/stories/:id/view', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  const s = await Story.findById(req.params.id);
+  if (!s) return res.sendStatus(404);
+  if (String(s.authorId) !== String(req.user._id)) {
+    const already = (s.viewers || []).some((v) => String(v.userId) === String(req.user._id));
+    if (!already) {
+      s.viewers.push({ userId: req.user._id, username: req.user.username, viewedAt: new Date() });
+      await s.save();
+    }
+  }
+  res.json({ ok: true, count: (s.viewers || []).length });
+});
+
+app.post('/api/stories/:id/react', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  const emoji = ['💪', '🔥', '👏', '❤️'].includes(req.body?.emoji) ? req.body.emoji : null;
+  if (!emoji) return res.status(400).json({ error: 'Invalid reaction.' });
+  const s = await Story.findById(req.params.id);
+  if (!s) return res.sendStatus(404);
+
+  if (!Array.isArray(s.reactions)) s.reactions = [];
+    const idx = s.reactions.findIndex(
+      (r) => String(r.userId) === String(req.user._id) && r.emoji === emoji
+    );
+  if (idx >= 0) s.reactions.splice(idx, 1);
+  else s.reactions.push({ userId: req.user._id, username: req.user.username, emoji });
+
+  await s.save();
+  res.json({ reactions: (s.reactions || []).map((r) => ({ username: r.username, emoji: r.emoji })) });
+});
+
+app.get('/api/stories/:id/photo', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  const s = await Story.findById(req.params.id);
+  if (!s?.photo?.data) return res.sendStatus(404);
+  res.set('Content-Type', s.photo.contentType || 'image/jpeg').set('Cache-Control', 'private, max-age=300').send(s.photo.data);
+});
+
+app.post('/api/stories', requireAuth, upload.single('photo'), async (req, res) => {
+  try {
+    const text = String(req.body?.text || '').trim();
+    const audience = req.body?.audience === 'PUBLIC' && req.user.isPublic ? 'PUBLIC' : 'FRIENDS';
+    if (text) {
+      const verdict = moderateCaption(text);
+      if (!verdict.allowed) return res.status(400).json({ error: MESSAGES[verdict.reason] || 'Keep stories fitness-related.' });
+    }
+    let photo;
+    if (req.file) {
+      if (!req.file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'Only image files allowed.' });
+      const cv = await checkPhoto(req.file);
+      if (cv.outcome === 'rejected') return res.status(422).json({ error: 'Please upload a valid workout/fitness photo.' });
+      photo = { data: req.file.buffer, contentType: req.file.mimetype };
+    }
+    if (!text && !photo) return res.status(400).json({ error: 'Add a workout win or photo for your 24h story.' });
+
+    const s = await Story.create({ authorId: req.user._id, audience, text, hasPhoto: Boolean(photo), photo });
+    res.status(201).json({
+      id: String(s._id),
+      audience: s.audience,
+      text: s.text,
+      hasPhoto: s.hasPhoto,
+      photoUrl: s.hasPhoto ? `/api/stories/${s._id}/photo` : null,
+      viewers: [],
+      createdAt: s.createdAt,
+    });
+  } catch (err) {
+    console.error('story failed:', err);
+    res.status(500).json({ error: 'Could not post story.' });
+  }
+});
+
+app.delete('/api/stories/:id', requireAuth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.sendStatus(404);
+  await Story.deleteOne({ _id: req.params.id, authorId: req.user._id });
+  res.json({ ok: true });
+});
+
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () => console.log(`Express running on http://localhost:${PORT}`));

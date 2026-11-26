@@ -28,6 +28,23 @@ function Msg({ m }) {
 
 export default function SettingsPage({ user, onUserChange, onBack }) {
   const [name, setName] = useState(user.displayName || user.username);
+
+  const [bio, setBio] = useState(user.bio || '');
+  const saveBio = async (nextBio, okText = 'Fitness bio updated.') => {
+  setBusy(true);
+  setMsg((m) => ({ ...m, bio: null }));
+  try {
+    const res = await api.put('/profile', { bio: nextBio });
+    if (res.user) onUserChange(res.user);
+    setBio(res.user?.bio ?? nextBio);
+    flash('bio', true, okText);
+  } catch (err) {
+    flash('bio', false, err.message);
+  } finally {
+    setBusy(false);
+  }
+};
+
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState({}); // { profile, privacy, password }: each { ok, text }
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
@@ -86,7 +103,7 @@ export default function SettingsPage({ user, onUserChange, onBack }) {
       <section className="card stack">
         <h2 className="card-title">Profile</h2>
         <div className="row">
-          <Avatar user={user} size={72} />
+          <Avatar user={user} size={96} />
           <div className="stack" style={{ gap: 8 }}>
             <div className="row wrap" style={{ gap: 8 }}>
               <label className="btn small ghost" style={{ cursor: 'pointer' }}>
@@ -108,6 +125,31 @@ export default function SettingsPage({ user, onUserChange, onBack }) {
           <div><button type="submit" className="btn small" disabled={busy || !nameChanged}>Save name</button></div>
         </form>
         <Msg m={msg.profile} />
+
+             <form className="stack" onSubmit={(e) => { e.preventDefault(); saveBio(bio.trim(), bio.trim() ? 'Fitness bio updated.' : 'Bio cleared.'); }}>
+       <label className="field">
+         <span className="row spread">
+           <span>Fitness bio / quirk</span>
+           <span className="small muted">{[...bio].length}/160</span>
+         </span>
+         <textarea
+           rows={2}
+           maxLength={160}
+           placeholder="e.g. Chasing a 225 bench & 10k steps daily 💪"
+           value={bio}
+           onChange={(e) => setBio(e.target.value)}
+         />
+       </label>
+       <span className="small muted">Shown on your profile card to friends (or everyone if public).</span>
+       <div className="row" style={{ gap: 8 }}>
+         <button type="submit" className="btn small" disabled={busy || bio.trim() === (user.bio || '')}>Save bio</button>
+         {(user.bio || bio.trim()) && (
+           <button type="button" className="btn small ghost" disabled={busy} onClick={() => saveBio('', 'Bio cleared.')}>Clear</button>
+         )}
+       </div>
+     </form>
+     <Msg m={msg.bio} />
+
       </section>
 
       {/* PRIVACY (FR-4, FR-21, FR-22; Conflict 1) */}
@@ -135,6 +177,22 @@ export default function SettingsPage({ user, onUserChange, onBack }) {
             <option value="PUBLIC" disabled={!user.isPublic}>Public{user.isPublic ? '' : ' (needs a public account)'}</option>
           </select>
         </label>
+
+        <label className={`choice ${user.allowStatsIndexing ? 'on' : ''}`}>
+          <input
+            type="checkbox"
+            checked={Boolean(user.allowStatsIndexing)}
+            disabled={busy}
+            onChange={(e) => save('privacy', { allowStatsIndexing: e.target.checked }, 'Stats indexing preference updated.')}
+          />
+          <div>
+            <div className="t">App may publicly index my progress stats</div>
+            <div className="small muted">
+              Displays a live Fitness Quirk badge (such as your top lift PR or step milestone) on your profile and search cards.
+            </div>
+          </div>
+        </label>
+
         <div className="small muted">When people search for you they see only your name, username and photo, never your posts. You can still change the audience on each post.</div>
         <Msg m={msg.privacy} />
       </section>
@@ -154,9 +212,40 @@ export default function SettingsPage({ user, onUserChange, onBack }) {
             <input type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />
           </label>
           <span className="small muted">At least 8 characters, with a letter and a number.</span>
-          <div><button type="submit" className="btn small" disabled={busy || !pw.current || !pw.next || !pw.confirm}>Change password</button></div>
+                    <div><button type="submit" className="btn small" disabled={busy || !pw.current || !pw.next || !pw.confirm}>Change password</button></div>
         </form>
         <Msg m={msg.password} />
+      </section>
+
+      {/* DANGER ZONE (FR-28 / TC-UI-19) */}
+      <section className="card stack" style={{ borderColor: 'rgba(180, 35, 24, 0.35)' }}>
+        <h2 className="card-title" style={{ color: '#b42318' }}>Delete Account</h2>
+        <div className="small muted">
+          Permanently delete your account, workouts, nutrition logs, stories, posts, and messages. This cannot be undone.
+        </div>
+        <div>
+          <button
+            type="button"
+            className="btn small"
+            style={{ background: '#b42318', color: '#ffffff' }}
+            disabled={busy}
+            onClick={async () => {
+              if (!window.confirm('Permanently delete your FitFollow account and all associated data?')) return;
+              setBusy(true);
+              try {
+                await api.del('/me');
+                localStorage.removeItem('token');
+                window.location.reload();
+              } catch (err) {
+                setBusy(false);
+                flash('delete', false, err.message || 'Could not delete account.');
+              }
+            }}
+          >
+            Delete Account &amp; All Data
+          </button>
+        </div>
+        <Msg m={msg.delete} />
       </section>
     </div>
   );
