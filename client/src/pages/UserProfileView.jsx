@@ -15,6 +15,7 @@ export default function UserProfileView({
   onOpenChat,
   onBack,
   onBlockedOrReported,
+  onOpenSettings,
 }) {
 
   const [reportModal, setReportModal] = useState(null);
@@ -48,9 +49,11 @@ export default function UserProfileView({
     }
   };
 
-    return (
+  return (
     <div className="stack">
-      <button type="button" className="settings-back" onClick={onBack}>← Back to Friends</button>
+      <button type="button" className="settings-back" onClick={onBack}>
+        {state === 'SELF' ? '← Back' : '← Back to Friends'}
+      </button>
 
       {profileModal.loading ? (
         <div className="spinner" />
@@ -108,6 +111,11 @@ export default function UserProfileView({
                       Block
                     </button>
                   </>
+                )}
+                                {state === 'SELF' && onOpenSettings && (
+                  <button type="button" className="btn small ghost" onClick={onOpenSettings}>
+                    Edit Profile
+                  </button>
                 )}
                 {state !== 'SELF' && (
                   <button
