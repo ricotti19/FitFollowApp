@@ -73,8 +73,7 @@ FitFollowApp/
 ## Testing
 Testing framework : Jest
 
-## Deployment
-3-Service Cloud Architecture
+## Deployment: 4-Service Distributed Cloud Architecture
   * MongoDB Atlas Cloud Database
   * Render Web Service for Node/Express API
   * Modal to host the serverless Python ML & CV service (4 GB RAM)
