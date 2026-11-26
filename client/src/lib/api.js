@@ -1,5 +1,5 @@
 // Tiny fetch wrapper for the Express API. In dev, Vite proxies /api to http://localhost:4000.
-const BASE = import.meta.env?.VITE_API_URL || '';
+const BASE = (import.meta.env?.VITE_API_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
 
 let token = null;
 try {

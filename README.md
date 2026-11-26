@@ -1,13 +1,16 @@
 # FitFollowApp
-FitFollowApp - Implementation - SE 3354 Group Project
+(SE 3354 Group Project)
 
-FitFollow is a comprehensive fitness tracking and social accountability application designed to help users monitor workouts, daily steps, nutrition, and body measurements all in one centralized hub. Going beyond traditional standalone trackers, FitFollow bridges self-improvement with community by letting users search for friends, chat in real-time, share 24-hour stories, and publish progress posts with strict multi-tiered audience privacy controls.
+FitFollow is a fitness tracking and social accountability app that brings workouts, daily steps, nutrition, and body measurements into one centralized hub.
+Unlike Instagram, which optimizes for passive scrolling and photo aesthetics, FitFollow embeds daily macro tracking, TDEE calorie planning, strength PR detection, and YouTube form coaching directly into a social accountability loop—letting users share text-only workout wins or logged PRs without needing a photo. It pairs personal tracking with a supportive community through friend search, real-time DMs, 24-hour stories, and multi-tiered audience privacy controls.
 
 ## 📋 Project Structure
 
-3-tier Client-Server architecture with a dedicated Computer Vision microservice
+3-tier Client-Server architecture MERN Stack (MongoDB, Express.js, React.js, Node.js) with a dedicated Computer Vision microservice
 
-Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python-inclusive layer
+Express.js serves as the lightweight backend framework that bridges the React frontend and MongoDB database on top of Node.js runtime environment, minimizing boilerplate code as much as possible for setup/connection
+
+(Client= frontend, Express-Server= backend, Server= model training CV microservice hosting Python files)
 
 ```text
 FitFollowApp/
@@ -17,7 +20,7 @@ FitFollowApp/
 │   ├── src/
 │   │   ├── components/      # Avatar.jsx
 │   │   ├── lib/             # api.js, format.js, image.js, plan.js
-│   │   ├── pages/           # BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx
+│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx, dialogShared.js
 │   │   ├── App.jsx          # Main application state & navigation
 │   │   ├── index.css        # Global theme tokens & responsive styles
 │   │   └── main.jsx         # React entry point
@@ -28,10 +31,10 @@ FitFollowApp/
 ├── express-server/          # Node + Express + MongoDB
 │   ├── scripts/
 │   │   ├── makeMod.js
-│   │   ├── seed.js
 │   │   └── seedPeople.js
 │   ├── src/
 │   │   ├── demoPeople.js
+│   │   ├── matching.js
 │   │   ├── moderation.js
 │   │   ├── plan.js
 │   │   ├── server.js
@@ -60,6 +63,8 @@ FitFollowApp/
 │   └── train.py
 ├── .gitignore
 ├── README.md
+├── Team14_Deliverable1.pdf      # for  reference
+├── Team14_Deliverable2.pdf      # for  reference
 ├── db_test_cases.md
 └── ui_test_cases.md
 ```
@@ -67,6 +72,11 @@ FitFollowApp/
 ## Testing
 Testing framework : Jest
 
+## Deployment
+3-Service Cloud Architecture
+  * MongoDB Atlas Cloud Database
+  * Render Web Service for Node/Express API
+  * Vercel to host Frontend
 
 ## UI (latest):
 <img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
@@ -74,5 +84,3 @@ Testing framework : Jest
 <img width="3420" height="1758" alt="image" src="https://github.com/user-attachments/assets/1781340e-028c-4716-babf-c6e69bf5b925" />
 
 <img width="3420" height="1760" alt="image" src="https://github.com/user-attachments/assets/fc9be425-5663-4652-9762-bf6ea3a3ffae" />
-
-
