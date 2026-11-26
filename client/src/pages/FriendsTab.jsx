@@ -133,9 +133,12 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
 
   const storyAuthors = new Set(activeStories.map((s) => s.author?.username).filter(Boolean));
 
-  useEffect(() => {
+  const loadActiveStories = () =>
     api.get('/stories/feed').then((d) => setActiveStories(d.stories || [])).catch(() => {});
-  }, []);
+
+  useEffect(() => {
+    loadActiveStories();
+  }, [feedJump]);
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 500);
@@ -249,7 +252,7 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
         PostPhoto={PostPhoto}
         onOpenStories={onOpenStories}
         onOpenSettings={onOpenSettings}
-        onReloadProfile={(uname) => { openProfile(uname); setPanelRefreshKey((k) => k + 1); }}
+        onReloadProfile={(uname) => { openProfile(uname); loadActiveStories(); setPanelRefreshKey((k) => k + 1); }}
         onOpenChat={(pu) => { setProfileModal(null); setActiveChat(pu); }}
         onBack={() => {
           setProfileModal(null);
