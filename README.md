@@ -76,9 +76,9 @@ Testing framework : Jest
 ## Deployment: 4-Service Distributed Cloud Architecture
   * MongoDB Atlas Cloud Database
   * Render Web Service for Node/Express API
-  * Modal to host the serverless Python ML & CV service (4 GB RAM)
+  * Modal to host the serverless Python ML & CV service 
   * Vercel to host Frontend
-+ Connected fitfollow-api.onrender.com to uptimerobot 
++ Connected fitfollow-api.onrender.com to uptimerobot for as less latency as possible, considering we are on Render free tier
 
 ## UI (latest):
 <img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
