@@ -21,14 +21,19 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
   const previewUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
+  const [compressedBlob, setCompressedBlob] = useState(null);
+
   const handleSelectFile = (selected) => {
     if (!selected || !selected.type.startsWith('image/')) return;
     setPhoto(selected);
+    setCompressedBlob(null);
     setCvNotice('');
+    compressImage(selected).then(setCompressedBlob).catch(() => {});
   };
 
   const handleClearPhoto = () => {
     setPhoto(null);
+    setCompressedBlob(null);
   };
 
   const handleCreatePost = async (e) => {
@@ -40,9 +45,10 @@ export default function PostComposer({ user, onOpenSettings, onPosted }) {
       fd.append('text', postText);
       fd.append('audience', audience);
       if (photo) {
-        const compressed = await compressImage(photo);
+        const compressed = compressedBlob || (await compressImage(photo));
         fd.append('photo', compressed, photo.name || 'workout.jpg');
       }
+  
       const res = await api.post('/feed', fd);
       if (res.photoStatus === 'review') setCvNotice(`Posted. Your photo is waiting for a moderator before others can see it. (${res.cvStatus})`);
       else if (res.photoStatus === 'approved') setCvNotice(`Photo approved. ${res.cvStatus}`);
