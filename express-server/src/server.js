@@ -1431,7 +1431,17 @@ app.get('/api/feed', requireAuth, async (req, res) => {
             });
           }
         }
-        if (fresh.length) await Post.insertMany(fresh).catch(() => {});
+        if (fresh.length) {
+          await Post.insertMany(fresh).catch(() => {});
+          const demoIds = demoAuthors.map((a) => a._id);
+          const stale = await Post.find(
+            { authorId: { $in: demoIds }, isSeededPhoto: { $ne: true } },
+            '_id'
+          ).sort({ createdAt: -1 }).skip(650).limit(3000).lean();
+          if (stale.length) {
+            await Post.deleteMany({ _id: { $in: stale.map((s) => s._id) } }).catch(() => {});
+          }
+        }
       }
 
     }
