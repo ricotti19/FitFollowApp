@@ -8,6 +8,7 @@ export default function DmsModal({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [msgText, setMsgText] = useState('');
   const [msgErr, setMsgErr] = useState('');
+  const [confirmModal, setConfirmModal] = useState(null); // null | { kind: 'clear' | 'block', user }
   const [showArchived, setShowArchived] = useState(false);
   const [archivedIds, setArchivedIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ff_archived_dms') || '[]'); } catch { return []; }
@@ -59,21 +60,30 @@ export default function DmsModal({ onClose }) {
     }
   };
 
-  const clearChat = async () => {
+  const clearChat = () => {
     if (!activeChat) return;
-    if (!window.confirm(`Clear all messages with @${activeChat.username}? This cannot be undone.`)) return;
-    await api.del(`/messages/${activeChat.id}`).catch(() => {});
-    setMessages([]);
+    setConfirmModal({ kind: 'clear', user: activeChat });
   };
 
-  const blockUser = async () => {
+  const blockUser = () => {
     if (!activeChat) return;
-    if (!window.confirm(`Block @${activeChat.username}? You will no longer see each other's posts or messages.`)) return;
-    await api.post(`/friends/${activeChat.id}/block`).catch(() => {});
-    const remaining = friends.filter((u) => u.id !== activeChat.id);
-    setFriends(remaining);
-    setActiveChat(remaining.at(0) || null);
-    setMessages([]);
+    setConfirmModal({ kind: 'block', user: activeChat });
+  };
+
+  const runConfirmedAction = async () => {
+    if (!confirmModal) return;
+    const { kind, user: target } = confirmModal;
+    setConfirmModal(null);
+    if (kind === 'clear') {
+      await api.del(`/messages/${target.id}`).catch(() => {});
+      setMessages([]);
+    } else if (kind === 'block') {
+      await api.post(`/friends/${target.id}/block`).catch(() => {});
+      const remaining = friends.filter((u) => u.id !== target.id);
+      setFriends(remaining);
+      setActiveChat(remaining.at(0) || null);
+      setMessages([]);
+    }
   };
 
   const displayedFriends = friends.filter((u) =>
@@ -179,8 +189,7 @@ export default function DmsModal({ onClose }) {
                 </div>
 
                 {msgErr && <div className="notice">{msgErr}</div>}
-
-                <form onSubmit={sendDm} className="row" style={{ gap: 10 }}>
+                                <form onSubmit={sendDm} className="row" style={{ gap: 10 }}>
                   <input
                     type="text"
                     value={msgText}
@@ -195,6 +204,27 @@ export default function DmsModal({ onClose }) {
           </div>
         )}
       </section>
+
+      {confirmModal && (
+        <div className="overlay" role="dialog" aria-modal="true" onClick={() => setConfirmModal(null)}>
+          <div className="sheet stack" style={{ maxWidth: 440, background: 'rgba(255, 255, 255, 0.97)' }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>
+              {confirmModal.kind === 'clear' ? 'Clear chat history?' : `Block @${confirmModal.user.username}?`}
+            </h3>
+            <p className="muted" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+              {confirmModal.kind === 'clear'
+                ? `All messages with @${confirmModal.user.username} will be permanently removed.`
+                : `You and @${confirmModal.user.username} will no longer see each other's posts, stories, or messages.`}
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmModal(null)}>Cancel</button>
+              <button type="button" className="btn small danger" onClick={runConfirmedAction}>
+                {confirmModal.kind === 'clear' ? 'Yes, clear chat' : 'Yes, block'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
