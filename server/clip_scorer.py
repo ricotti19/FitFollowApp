@@ -20,15 +20,16 @@ POSITIVE = [
     "a photo of a person doing bodyweight exercises like push-ups, squats or lunges",
     "a photo of a person running or jogging outdoors",
     "a photo of a person doing yoga, stretching or pilates",
-    "a photo of a person cycling, swimming or playing a sport",
+    "a photo of a person cycling, swimming or playing a sport",    
     "a photo of gym equipment such as dumbbells, barbells and machines",
     "a photo of a protein shaker bottle, hydration flask, or post-workout supplement",
+    "a photo of a person eating a healthy salad, fresh fruit bowl, or clean post-workout meal",
 ]
 
 
 NEGATIVE = [
-    "a photo of food, a meal, a dish on a plate, or dining at a table",
-    "a photo of a drink, beverage, dessert, snack, or restaurant menu item",
+    "a photo of fast food, junk food, fried food, sugary dessert, or heavy restaurant dining",
+    "a close-up photo of an empty plate or unattended food without a person exercising or meal prepping",
     "a photo of a meme, screenshot, or text on a plain background",
     "a photo of a landscape, nature scenery, or city street with no one exercising",
     "a photo of a casual selfie of a person posing without exercising",
