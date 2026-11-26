@@ -1,14 +1,12 @@
 """
 FitFollow CV service (Flask). The Express API calls this to decide whether an uploaded photo is a workout photo.
 
-    python app.py                 -> http://127.0.0.1:8001
+    python app.py                
 
     GET  /health                  what is loaded (pose backend, trained models, CLIP)
     POST /classify   file=<img>   {confidence, poseFound, mode, signals}      -> express-server/src/services/cv.js
     POST /form       file=<img>   {poseFound, goodFormProbability, label}     optional "form check" (needs form model)
 
-It listens on 127.0.0.1 ONLY by default: this service has no user accounts and must never be exposed to the
-internet. If you deploy it on another machine, set HOST and CV_TOKEN (the Express API sends the same token).
 """
 from __future__ import annotations
 
@@ -113,6 +111,13 @@ def create_app(store: ModelStore | None = None, clip="default") -> Flask:
     @app.errorhandler(413)
     def too_large(_e):
         return jsonify(error="image too large"), 413
+    
+    try:
+        pose_mod.get_backend()
+    except Exception:
+        pass
+    if clip is not None and not clip.available:
+        clip.load()
 
     @app.get("/health")
     def health():
