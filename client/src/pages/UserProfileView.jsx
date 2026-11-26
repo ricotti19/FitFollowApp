@@ -164,7 +164,7 @@ export default function UserProfileView({
               </div>
             ) : userPosts.length === 0 ? (
               <div className="card empty">No posts shared yet.</div>
-            ) : userPosts.map((post) => (
+                          ) : userPosts.map((post) => (
               <article key={post._id} className="post">
                 <div className="post-head">
                   <Avatar user={pu} size={46} />
@@ -172,6 +172,24 @@ export default function UserProfileView({
                     <div className="name">{pu.displayName}</div>
                     <div className="handle">@{pu.username} • {AUDIENCE_LABEL[post.audience] || post.audience}{post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ''}</div>
                   </div>
+                  {state === 'SELF' && (
+                    <button
+                      type="button"
+                      className="btn small dark-navy"
+                      onClick={async () => {
+                        await api.del(`/feed/${post._id}`).catch(() => {});
+                        setProfileModal((prev) => ({
+                          ...prev,
+                          data: {
+                            ...prev.data,
+                            posts: (prev.data?.posts || []).filter((x) => x._id !== post._id),
+                          },
+                        }));
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
                 {post.text && <div className="post-text">{post.text}</div>}
                 {post.photoUrl && <PostPhoto path={post.photoUrl} />}
