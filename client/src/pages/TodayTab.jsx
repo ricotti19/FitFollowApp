@@ -157,7 +157,7 @@ function PlanEditor({ profile, onSaved }) {
   );
 }
 
-export default function TodayTab() {
+export default function TodayTab({ onOpenHelp }) {
   const day = localDay();
   const [steps, setSteps] = useState(0);
   const [stepGoal, setStepGoal] = useState(10000);
@@ -172,8 +172,6 @@ export default function TodayTab() {
   const [customFood, setCustomFood] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' });
   const [customErrors, setCustomErrors] = useState({});
   const [customMsg, setCustomMsg] = useState('');
-  const [goalInput, setGoalInput] = useState('');
-  const [goalMsg, setGoalMsg] = useState('');
   const searchSeq = useRef(0);
 
   const loadData = async () => {
@@ -328,41 +326,6 @@ export default function TodayTab() {
             This is a generic {fmtNum(calGoal)} kcal goal. Add your age, height and weight under "Your plan" below to get one that fits you.
           </div>
         )}
-
-     <form
-       onSubmit={async (e) => {
-         e.preventDefault();
-         setGoalMsg('');
-         const val = Number(goalInput);
-         if (!Number.isFinite(val) || val < 1000 || val > 6000) {
-           setGoalMsg('Enter a daily goal between 1,000 and 6,000 kcal.');
-           return;
-         }
-         try {
-           await api.post('/nutrition/goal', { goal: Math.round(val) });
-           setGoalInput('');
-           setGoalMsg(`Daily calorie goal set to ${fmtNum(Math.round(val))} kcal.`);
-           loadData();
-         } catch (err) {
-           setGoalMsg(err.message || 'Could not update calorie goal.');
-         }
-       }}
-       className="row"
-       style={{ gap: 8 }}
-     >
-       <input
-         type="number"
-         min="1000"
-         max="6000"
-         placeholder={`Set custom goal (current: ${calGoal} kcal)`}
-         value={goalInput}
-         onChange={(e) => { setGoalInput(e.target.value); if (goalMsg) setGoalMsg(''); }}
-         style={{ flex: 1 }}
-       />
-       <button type="submit" className="btn small">Set goal</button>
-     </form>
-     {goalMsg && <div className="small muted" role="status">{goalMsg}</div>}
-
         <div className="macros">
           <div><span className="small muted">Protein</span><b>{t.protein}g</b></div>
           <div><span className="small muted">Carbs</span><b>{t.carbs}g</b></div>
@@ -497,6 +460,17 @@ export default function TodayTab() {
         </details>
 
       </section>
+
+      {/* HELP & ACCOUNT INFO (frontend only) */}
+      {onOpenHelp && (
+        <section className="card row spread wrap">
+          <div>
+            <h2 className="card-title" style={{ marginBottom: 2 }}>Help &amp; account info</h2>
+            <div className="small muted">Plans, how canceling works, and copyright.</div>
+          </div>
+          <button type="button" className="btn small ghost" onClick={onOpenHelp}>Open</button>
+        </section>
+      )}
     </div>
   );
 }
