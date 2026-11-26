@@ -14,13 +14,14 @@ Express.js serves as the lightweight backend framework that bridges the React fr
 
 ```text
 FitFollowApp/
+
 ├── client/                  # Vite React UI
 │   ├── public/
-│   │   └── banners/         # banner-1.jpg, banner-2.jpg, banner-3.jpg, banner-4.jpg, dumbbell.png, fitness.png, fitness2.png, fitness3.png, fitness4.png
+│   │   └── banners/         # jpgs and pngs used for the front pages' UI/UX
 │   ├── src/
 │   │   ├── components/      # Avatar.jsx
 │   │   ├── lib/             # api.js, format.js, image.js, plan.js
-│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, WorkoutsTab.jsx, dialogShared.js
+│   │   ├── pages/           # AuthDialog.jsx, BodyTab.jsx, Dashboard.css, Dashboard.jsx, FriendsDialogs.jsx, FriendsPanel.jsx, FriendsTab.jsx, InfoDialog.jsx, LandingViews.jsx, PostComposer.jsx, ResetPasswordDialog.jsx, SettingsPage.jsx, TodayTab.jsx, UserProfileView.jsx, WorkoutsTab.jsx, dialogShared.js
 │   │   ├── App.jsx          # Main application state & navigation
 │   │   ├── index.css        # Global theme tokens & responsive styles
 │   │   └── main.jsx         # React entry point
@@ -31,9 +32,12 @@ FitFollowApp/
 ├── express-server/          # Node + Express + MongoDB
 │   ├── scripts/
 │   │   ├── makeMod.js
-│   │   └── seedPeople.js
+│   │   ├── seedFeedImages.js
+│   │   ├── seedPeople.js
+│   │   └── seedStories.js
 │   ├── src/
 │   │   ├── demoPeople.js
+│   │   ├── exercises.js
 │   │   ├── matching.js
 │   │   ├── moderation.js
 │   │   ├── plan.js
@@ -51,6 +55,8 @@ FitFollowApp/
 ├── server/                  # Python 3.12 + Flask + MediaPipe
 │   ├── .venv/
 │   ├── models/
+│   │   ├── pose_landmarker_lite.task
+│   │   └── relevance_classifier.pth
 │   ├── app.py
 │   ├── clip_scorer.py
 │   ├── features.py
@@ -62,11 +68,6 @@ FitFollowApp/
 │   ├── tasks.py
 │   └── train.py
 ├── .gitignore
-├── README.md
-├── Team14_Deliverable1.pdf      # for  reference
-├── Team14_Deliverable2.pdf      # for  reference
-├── db_test_cases.md
-└── ui_test_cases.md
 ```
 
 ## Testing
