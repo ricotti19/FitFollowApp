@@ -21,6 +21,7 @@ export default function UserProfileView({
   const [reportModal, setReportModal] = useState(null);
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [confirmDeletePostId, setConfirmDeletePostId] = useState(null);
+  const [confirmDeleteStoryId, setConfirmDeleteStoryId] = useState(null);
   const [deletedStoryIds, setDeletedStoryIds] = useState(() => new Set());
   const [drafts, setDrafts] = useState({});
   const [errs, setErrs] = useState({});
@@ -147,15 +148,11 @@ export default function UserProfileView({
                       <div className="name">{pu.displayName} <span className="chip accent" style={{ marginLeft: 6 }}>24h Story</span></div>
                       <div className="handle">@{pu.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
-                                        {state === 'SELF' && (
+                    {state === 'SELF' && (
                       <button
                         type="button"
                         className="btn small dark-navy"
-                        onClick={async () => {
-                          await api.del(`/stories/${st.id}`).catch(() => {});
-                          setDeletedStoryIds((prev) => new Set([...prev, st.id]));
-                          onReloadProfile(pu.username);
-                        }}
+                        onClick={() => setConfirmDeleteStoryId(st.id)}
                       >
                         Delete
                       </button>
@@ -240,6 +237,33 @@ export default function UserProfileView({
             ))}
           </section>
         </>
+      )}
+
+      {confirmDeleteStoryId && (
+        <div className="overlay" role="dialog" aria-modal="true" onClick={() => setConfirmDeleteStoryId(null)}>
+          <div className="sheet stack" style={{ maxWidth: 440, background: 'rgba(255, 255, 255, 0.97)' }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 0 }}>Delete this 24h story?</h3>
+            <p className="muted" style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.5 }}>
+              This will permanently remove your story from FitFollow.
+            </p>
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <button type="button" className="btn small ghost" onClick={() => setConfirmDeleteStoryId(null)}>Cancel</button>
+              <button
+                type="button"
+                className="btn small danger"
+                onClick={async () => {
+                  const targetId = confirmDeleteStoryId;
+                  setConfirmDeleteStoryId(null);
+                  setDeletedStoryIds((prev) => new Set([...prev, targetId]));
+                  await api.del(`/stories/${targetId}`).catch(() => {});
+                  onReloadProfile(pu.username);
+                }}
+              >
+                Yes, delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {confirmDeletePostId && (
