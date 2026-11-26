@@ -104,12 +104,14 @@ export default function UserProfileView({
                       className="btn small ghost"
                       style={{ color: '#b42318' }}
                       onClick={async () => {
+                        if (!window.confirm(`Block @${pu.username}? You will no longer see each other's posts or messages.`)) return;
                         await api.post(`/friends/${pu.id}/block`).catch(() => {});
                         onBlockedOrReported(pu.id, pu.username, '');
                       }}
                     >
                       Block
                     </button>
+
                   </>
                 )}
                                 {state === 'SELF' && onOpenSettings && (
