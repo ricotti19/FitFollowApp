@@ -1540,7 +1540,7 @@ app.post('/api/feed', requireAuth, (req, res, next) => upload.single('photo')(re
       if (!req.file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'Only image files can be uploaded.' });
       const cv = await checkPhoto(req.file);
       if (cv.outcome === 'rejected') {
-        return res.status(422).json({ error: `Oops, that doesn't look like a workout photo:).`, cvStatus: 'rejected' });
+        return res.status(422).json({ error: `Oops, that doesn't seem fitness-related!`, cvStatus: 'rejected' });
       }
       cvStatus = cv.note;
       photoStatus = cv.outcome;
