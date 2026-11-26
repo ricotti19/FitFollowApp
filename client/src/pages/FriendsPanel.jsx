@@ -296,7 +296,21 @@ export default function FriendsPanel({ onFeedChange, onMessage, onConfirm, onSel
             </div>
           </>
         )}
-        {outgoing.length > 0 && <div className="small muted">Waiting on: {outgoing.map((u) => `@${u.username}`).join(', ')}</div>}
+        {outgoing.length > 0 && (
+          <>
+            <div className="small muted">Waiting on</div>
+            <div className="list">
+              {outgoing.map((u) => (
+                <div key={u.id} className="item spread">
+                  <Person u={u} onSelect={onSelectProfile} storyAuthors={storyAuthors} />
+                  <button type="button" className="btn small ghost" onClick={() => removeRelation(u.id)}>
+                    Requested · Cancel
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
     </>
   );
