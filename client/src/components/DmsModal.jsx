@@ -91,7 +91,7 @@ export default function DmsModal({ onClose }) {
                 {showArchived ? 'Active Chats' : `Archived (${archivedIds.length})`}
               </button>
             )}
-            <span className="chip accent">{friends.length} friends</span>
+            <span className="chip accent">{friends.length} {friends.length === 1 ? 'friend' : 'friends'}</span>
           </div>
         </div>
 
