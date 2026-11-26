@@ -1381,6 +1381,26 @@ app.patch('/api/reports/:id', requireAuth, async (req, res) => {
 
 // ---------------- Feed (privacy-filtered: Home + Discover + Infinite Scroll + 20s Pulse) ----------------
 let lastDiscoverPulseAt = 0;
+let cachedPulsePools = null;
+
+async function trimExcessPulsePosts() {
+  try {
+    const demoIds = await User.distinct('_id', { isDemo: true });
+    if (!demoIds.length) return;
+    while (true) {
+      const stale = await Post.find(
+        { authorId: { $in: demoIds }, isSeededPhoto: { $ne: true } },
+        '_id'
+      ).sort({ createdAt: -1 }).skip(650).limit(2500).lean();
+      if (!stale.length) break;
+      await Post.deleteMany({ _id: { $in: stale.map((s) => s._id) } });
+    }
+  } catch (e) {
+    console.warn('pulse trim skipped:', e.message);
+  }
+}
+
+mongoose.connection.once('open', () => { trimExcessPulsePosts(); });
 
 app.get('/api/feed', requireAuth, async (req, res) => {
   const me = req.user._id;
@@ -1402,11 +1422,15 @@ app.get('/api/feed', requireAuth, async (req, res) => {
     'Kwame', 'Kofi', 'Tariq', 'Malik', 'Idris', 'Chidi', 'Tunde', 'Zuri', 'Jelani', 'Jabari',
     ]);
 
-      const demoAuthors = await User.find({ isDemo: true, isPublic: true }, '_id username displayName isPublic').limit(80).lean();
-      const [manPool, womanPool] = await Promise.all([
-        Post.find({ isSeededPhoto: true, gender: 'man' }, 'photo text').limit(127).lean(),
-        Post.find({ isSeededPhoto: true, gender: 'woman' }, 'photo text').limit(127).lean(),
-      ]);
+      if (!cachedPulsePools) {
+        const [demoAuthors, manPool, womanPool] = await Promise.all([
+          User.find({ isDemo: true, isPublic: true }, '_id username displayName isPublic').limit(80).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'man' }, 'photo text').limit(127).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'woman' }, 'photo text').limit(127).lean(),
+        ]);
+        cachedPulsePools = { demoAuthors, manPool, womanPool };
+      }
+      const { demoAuthors, manPool, womanPool } = cachedPulsePools;
       if (demoAuthors.length > 0) {
         const rng = makeRng(`pulse-${Date.now()}`);
         const fresh = [];
@@ -1433,14 +1457,7 @@ app.get('/api/feed', requireAuth, async (req, res) => {
         }
         if (fresh.length) {
           await Post.insertMany(fresh).catch(() => {});
-          const demoIds = demoAuthors.map((a) => a._id);
-          const stale = await Post.find(
-            { authorId: { $in: demoIds }, isSeededPhoto: { $ne: true } },
-            '_id'
-          ).sort({ createdAt: -1 }).skip(650).limit(3000).lean();
-          if (stale.length) {
-            await Post.deleteMany({ _id: { $in: stale.map((s) => s._id) } }).catch(() => {});
-          }
+          trimExcessPulsePosts();
         }
       }
 
