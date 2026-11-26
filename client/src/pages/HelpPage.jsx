@@ -69,7 +69,7 @@ function PlansSection() {
         Everything you need to train and stay accountable is free. Pro adds extra tools for people who want deeper stats.
       </p>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '1.08rem' }}>
         <thead>
           <tr>
             <th scope="col" style={{ ...cell, borderTop: 0, textAlign: 'left' }}>Feature</th>
@@ -214,7 +214,7 @@ export default function HelpPage({ onBack, onOpenSettings, initialSection = 'pla
   return (
     <div className="stack help-page">
       <button type="button" className="settings-back" onClick={onBack}>← Back</button>
-      <h1 className="card-title" style={{ fontSize: '1.25rem' }}>Help &amp; account info</h1>
+      <h1 className="card-title">Important Info</h1>
 
       <div className="seg" role="tablist" aria-label="Help sections">
         {SECTIONS.map((s) => (
