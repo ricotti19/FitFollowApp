@@ -22,10 +22,9 @@ POSITIVE = [
     "a photo of a person doing yoga, stretching or pilates",
     "a photo of a person cycling, swimming or playing a sport",    
     "a photo of gym equipment such as dumbbells, barbells and machines",
-    "a photo of a protein shaker bottle, hydration flask, or post-workout supplement",
     "a photo of a person eating a healthy salad, fresh fruit bowl, or clean post-workout meal",
+    "a photo of a person holding a protein shaker bottle, hydration flask, or post-workout supplement",
 ]
-
 
 NEGATIVE = [
     "a photo of fast food, junk food, fried food, sugary dessert, or heavy restaurant dining",
@@ -41,21 +40,11 @@ NEGATIVE = [
     "a photo of a person in a bikini or swimsuit at the beach or pool",
     "a photo of a glamour selfie or formal evening dress",
     "a photo of a person in lingerie or underwear",
-    "a photo of a naked person without clothes",
     "a photo of a person in an explicit or sexual position",
     "a photo of a person sleeping in bed",
     "a photo of people fighting or in physical violence",
     "a photo of a person watching television or scrolling a phone on a sofa",
-    "a photo of a person sitting, standing, or talking casually without exercising",
-    "a photo of a retail product, car, or building exterior",
-    "a photo of a person in a bikini or swimsuit at the beach or pool",
-    "a photo of a glamour selfie or formal evening dress",
-    "a photo of a person in lingerie or underwear",
     "a photo of a naked person without clothes",
-    "a photo of a person in an explicit or sexual position",
-    "a photo of a person sleeping in bed",
-    "a photo of people fighting or in physical violence",
-    "a photo of a person watching television or scrolling a phone on a sofa",
 ]
 
 class ClipScorer:
