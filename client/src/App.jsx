@@ -271,10 +271,24 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
                     <span className={`chip ${user.isPublic ? 'accent' : ''}`}>{user.isPublic ? 'Public account' : 'Private account'}</span>
                   </div>
                 </div>
-                <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
+                                <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
                   Profile &amp; privacy
                 </button>
-                  <button
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="profile-popover-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowSettings(false);
+                    setTopModal(null);
+                    setActiveTab('friends');
+                    setFeedJump({ scope: 'friends', openUser: user.username, ts: Date.now() });
+                  }}
+                >
+                  My Page
+                </button>
+                <button
                   type="button"
                   role="menuitem"
                   className="profile-popover-item danger"
