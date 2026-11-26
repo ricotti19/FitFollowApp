@@ -80,7 +80,7 @@ Testing framework : Jest
   * Vercel to host Frontend
 + Connected fitfollow-api.onrender.com to uptimerobot for as less latency as possible, considering we are on Render free tier
 
-## UI (latest):
+## UI:
 <img width="3420" height="1764" alt="image" src="https://github.com/user-attachments/assets/efb1e031-27bd-4e27-bd7a-4e4a9310a093" />
 
 <img width="3420" height="1758" alt="image" src="https://github.com/user-attachments/assets/1781340e-028c-4716-babf-c6e69bf5b925" />
