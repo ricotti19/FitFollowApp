@@ -280,6 +280,24 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
                   Help &amp; plans
                 </button>
                   <button
+                                <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
+                  Profile &amp; privacy
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="profile-popover-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowSettings(false);
+                    setTopModal(null);
+                    setActiveTab('friends');
+                    setFeedJump({ scope: 'friends', openUser: user.username, ts: Date.now() });
+                  }}
+                >
+                  My Page
+                </button>
+                <button
                   type="button"
                   role="menuitem"
                   className="profile-popover-item danger"

@@ -248,6 +248,7 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
         activeStories={activeStories}
         PostPhoto={PostPhoto}
         onOpenStories={onOpenStories}
+        onOpenSettings={onOpenSettings}
         onReloadProfile={(uname) => { openProfile(uname); setPanelRefreshKey((k) => k + 1); }}
         onOpenChat={(pu) => { setProfileModal(null); setActiveChat(pu); }}
         onBack={() => {

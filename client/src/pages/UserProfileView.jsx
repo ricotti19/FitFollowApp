@@ -15,6 +15,7 @@ export default function UserProfileView({
   onOpenChat,
   onBack,
   onBlockedOrReported,
+  onOpenSettings,
 }) {
 
   const [reportModal, setReportModal] = useState(null);
@@ -48,9 +49,11 @@ export default function UserProfileView({
     }
   };
 
-    return (
+  return (
     <div className="stack">
-      <button type="button" className="settings-back" onClick={onBack}>← Back to Friends</button>
+      <button type="button" className="settings-back" onClick={onBack}>
+        {state === 'SELF' ? '← Back' : '← Back to Friends'}
+      </button>
 
       {profileModal.loading ? (
         <div className="spinner" />
@@ -109,6 +112,11 @@ export default function UserProfileView({
                     </button>
                   </>
                 )}
+                                {state === 'SELF' && onOpenSettings && (
+                  <button type="button" className="btn small ghost" onClick={onOpenSettings}>
+                    Edit Profile
+                  </button>
+                )}
                 {state !== 'SELF' && (
                   <button
                     type="button"
@@ -156,7 +164,7 @@ export default function UserProfileView({
               </div>
             ) : userPosts.length === 0 ? (
               <div className="card empty">No posts shared yet.</div>
-            ) : userPosts.map((post) => (
+                          ) : userPosts.map((post) => (
               <article key={post._id} className="post">
                 <div className="post-head">
                   <Avatar user={pu} size={46} />
@@ -164,6 +172,24 @@ export default function UserProfileView({
                     <div className="name">{pu.displayName}</div>
                     <div className="handle">@{pu.username} • {AUDIENCE_LABEL[post.audience] || post.audience}{post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ''}</div>
                   </div>
+                  {state === 'SELF' && (
+                    <button
+                      type="button"
+                      className="btn small dark-navy"
+                      onClick={async () => {
+                        await api.del(`/feed/${post._id}`).catch(() => {});
+                        setProfileModal((prev) => ({
+                          ...prev,
+                          data: {
+                            ...prev.data,
+                            posts: (prev.data?.posts || []).filter((x) => x._id !== post._id),
+                          },
+                        }));
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
                 {post.text && <div className="post-text">{post.text}</div>}
                 {post.photoUrl && <PostPhoto path={post.photoUrl} />}

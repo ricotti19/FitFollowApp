@@ -378,8 +378,14 @@ const removePreset = async (p) => {
                   ))}
                 </div>
               ) : null}
-              {coachSearchUrl && (
-                <a href={coachSearchUrl} target="_blank" rel="noopener noreferrer" className="btn block" style={{ textAlign: 'center', textDecoration: 'none' }}>
+                {coachSearchUrl && (
+                <a
+                  href={coachSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn block"
+                  style={{ textAlign: 'center', textDecoration: 'none', whiteSpace: 'normal', lineHeight: 1.35 }}
+                >
                   Browse More {coachExercise} Form Videos ↗
                 </a>
               )}
