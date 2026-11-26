@@ -807,10 +807,10 @@
     display: none;
   }
 }
-/* ------------------------------------------------------------------ Larger Sliding Testimonials Carousel */
+
 .testimonials-slider-container {
   position: relative;
-  width: min(1340px, 94vw); /* Widened from 900px */
+  width: min(1340px, 94vw);
   margin: 1rem auto 1.5rem;
   display: flex;
   align-items: center;
@@ -828,27 +828,24 @@
 
 .testimonials-track {
   display: flex;
+  align-items: stretch;
   transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
   will-change: transform;
 }
 
 .testimonial-slide-card {
+  flex: 0 0 100%;
+  width: 100%;
   min-width: 100%;
   display: grid;
   grid-template-columns: 1.15fr 1.25fr;
   background: linear-gradient(135deg, var(--cream-from), var(--cream-to));
 }
 
-@media (max-width: 850px) {
-  .testimonial-slide-card {
-    grid-template-columns: 1fr;
-  }
-}
-
 .testimonial-banner-wrapper {
   position: relative;
   width: 100%;
-  height: clamp(440px, 54vh, 560px); /* Taller photo container */
+  height: clamp(440px, 54vh, 560px);
   overflow: hidden;
 }
 
@@ -870,18 +867,8 @@
   );
 }
 
-@media (max-width: 850px) {
-  .testimonial-gradient-overlay {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 247, 224, 0.05) 0%,
-      var(--cream-to) 90%
-    );
-  }
-}
-
 .testimonial-content-box {
-  padding: clamp(2.5rem, 5vw, 4.5rem); /* More generous breathing room */
+  padding: clamp(2.5rem, 5vw, 4.5rem);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -889,7 +876,7 @@
 }
 
 .testimonial-tag {
-  font-size: 1rem; /* Scaled up from 0.85rem */
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -899,20 +886,19 @@
 
 .testimonial-name {
   font-family: var(--font-title);
-  font-size: clamp(2.4rem, 3.8vw, 3.4rem); /* Scaled up from 1.8rem–2.4rem */
+  font-size: clamp(2.4rem, 3.8vw, 3.4rem);
   margin: 0 0 1.25rem;
   color: var(--ink);
   line-height: 1.05;
 }
 
 .testimonial-quote {
-  font-size: clamp(1.2rem, 1.7vw, 1.5rem) !important; /* Scaled up from 1.05rem–1.25rem */
+  font-size: clamp(1.2rem, 1.7vw, 1.5rem) !important;
   line-height: 1.55;
   color: var(--navy);
   margin: 0;
 }
 
-/* Larger Slider Arrow Controls */
 .slider-nav-btn {
   background: rgba(255, 247, 224, 0.9);
   border: 2px solid var(--navy);
@@ -935,13 +921,26 @@
   transform: scale(1.08);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 850px) {
+  .testimonials-page {
+    padding: 1.15rem 1rem 1.75rem !important;
+  }
+
+  .testimonials-page .overview-header {
+    margin-bottom: 0.85rem;
+  }
+
+  .testimonials-page .ambient-strips-layer {
+    display: none;
+  }
+
   .testimonials-slider-container {
     width: 100%;
+    max-width: 440px;
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
-    margin: 0.5rem auto 1rem;
+    margin: 0.25rem auto 0.75rem;
   }
 
   .testimonials-track-wrapper {
@@ -953,32 +952,62 @@
   .slider-nav-btn.prev,
   .slider-nav-btn.next {
     order: 2;
-    width: 44px;
-    height: 44px;
-    font-size: 1.65rem;
+    width: 42px;
+    height: 42px;
+    font-size: 1.55rem;
+  }
+
+  .testimonial-slide-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: 165px auto;
   }
 
   .testimonial-banner-wrapper {
-    height: 190px;
+    height: 165px !important;
+    max-height: 165px !important;
+  }
+
+  .testimonial-gradient-overlay {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 247, 224, 0.02) 0%,
+      var(--cream-to) 95%
+    );
   }
 
   .testimonial-content-box {
-    padding: 1.15rem 1.25rem 1.35rem;
+    padding: 0.95rem 1.15rem 1.15rem !important;
   }
 
   .testimonial-tag {
-    font-size: 0.76rem;
-    margin-bottom: 0.35rem;
+    font-size: 0.74rem !important;
+    margin-bottom: 0.3rem;
   }
 
   .testimonial-name {
-    font-size: 1.65rem;
-    margin-bottom: 0.6rem;
+    font-size: 1.55rem !important;
+    margin-bottom: 0.45rem;
   }
 
   .testimonial-quote {
-    font-size: 0.96rem !important;
-    line-height: 1.48;
+    font-size: 0.94rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .testimonials-dots {
+    margin-top: 0.5rem;
+    gap: 8px;
+  }
+
+  .testimonials-page > div:last-child {
+    margin-top: 1.1rem !important;
+  }
+
+  .testimonials-page > div:last-child .hero-cta {
+    width: 100%;
+    max-width: 440px;
+    font-size: 1rem !important;
+    padding: 14px 20px !important;
   }
 }
 
