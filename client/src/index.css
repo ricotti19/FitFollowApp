@@ -1290,3 +1290,48 @@ details[open] > summary::before { transform: rotate(90deg); }
   70% { transform: scale(1.1); box-shadow: 0 0 0 7px rgba(225, 75, 99, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 75, 99, 0); }
 }
+
+/* ---------- Help & account info page (HelpPage.jsx) ---------- */
+.app .help-page .card .help-text {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  color: rgba(20, 20, 31, 0.75) !important;
+}
+.app .help-page .card .help-sub {
+  margin: 4px 0 0 !important;
+  font-family: var(--body-font) !important;
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: var(--ink-strong) !important;
+}
+.app .help-page .card .help-list {
+  margin: 0 !important;
+  padding-left: 22px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.app .help-page .card .help-list li {
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  color: var(--ink-strong) !important;
+}
+.app .help-page .card .help-opt-title {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: var(--ink-strong) !important;
+}
+.app .help-page .card .help-opt-desc {
+  margin-top: 2px;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  color: rgba(20, 20, 31, 0.65) !important;
+}
+.app .help-page .card .help-lic {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

@@ -157,7 +157,7 @@ function PlanEditor({ profile, onSaved }) {
   );
 }
 
-export default function TodayTab() {
+export default function TodayTab({ onOpenHelp }) {
   const day = localDay();
   const [steps, setSteps] = useState(0);
   const [stepGoal, setStepGoal] = useState(10000);
@@ -497,6 +497,17 @@ export default function TodayTab() {
         </details>
 
       </section>
+
+      {/* HELP & ACCOUNT INFO (frontend only) */}
+      {onOpenHelp && (
+        <section className="card row spread wrap">
+          <div>
+            <h2 className="card-title" style={{ marginBottom: 2 }}>Help &amp; account info</h2>
+            <div className="small muted">Plans, how canceling works, and copyright.</div>
+          </div>
+          <button type="button" className="btn small ghost" onClick={onOpenHelp}>Open</button>
+        </section>
+      )}
     </div>
   );
 }

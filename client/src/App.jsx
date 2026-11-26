@@ -5,6 +5,7 @@ import Avatar from './components/Avatar';
 import StoriesModal from './components/StoriesModal';
 import DmsModal from './components/DmsModal';
 import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 import TodayTab from './pages/TodayTab';
 import WorkoutsTab from './pages/WorkoutsTab';
 import BodyTab from './pages/BodyTab';
@@ -130,6 +131,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false); // Help & account info page
   const [topModal, setTopModal] = useState(null); // null | 'stories' | 'dms'
   const [storyFocusUser, setStoryFocusUser] = useState(null);
   const [feedJump, setFeedJump] = useState(null); // null | { scope: 'friends' | 'discover', ts: number }
@@ -156,7 +158,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
 
   const logout = () => {
     setMenuOpen(false);
-    setShowSettings(false);
+    setShowSettings(false); setShowHelp(false);
     setActiveTab('today'); // so the next person to sign in doesn't land on a stale tab
     setToken(null);
     clearPhotoCache();
@@ -209,7 +211,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
   return (
     <div className="app">      
     <header className="app-header">
-        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setTopModal(null); setActiveTab('today'); }}>FitFollow</a>
+        <a href="#today" className="logo" onClick={(e) => { e.preventDefault(); setShowSettings(false); setShowHelp(false); setTopModal(null); setActiveTab('today'); }}>FitFollow</a>
         <div className="header-right">
                  <button
          type="button"
@@ -223,7 +225,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
          type="button"
          className="btn small ghost"
          style={{ padding: '5px 10px', fontSize: '0.82rem' }}
-         onClick={() => { setShowSettings(false); setTopModal('dms'); }}
+         onClick={() => { setShowSettings(false); setShowHelp(false); setTopModal('dms'); }}
 
        >
          DMs
@@ -271,6 +273,13 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
                     <span className={`chip ${user.isPublic ? 'accent' : ''}`}>{user.isPublic ? 'Public account' : 'Private account'}</span>
                   </div>
                 </div>
+                <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowHelp(false); setShowSettings(true); }}>
+                  Profile &amp; privacy
+                </button>
+                <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(false); setTopModal(null); setShowHelp(true); }}>
+                  Help &amp; plans
+                </button>
+                  <button
                                 <button type="button" role="menuitem" className="profile-popover-item" onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
                   Profile &amp; privacy
                 </button>
@@ -363,7 +372,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
                type="button"
                className="btn small ghost"
                onClick={() => {
-                 setShowSettings(false);
+                 setShowSettings(false); setShowHelp(false);
                  setTopModal(null);
                  setActiveTab('friends');
                }}
@@ -381,7 +390,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        type="button"
        className={`ff-feed-rail-btn ${activeTab === 'friends' && (!feedJump || feedJump.scope === 'friends') ? 'active' : ''}`}
        onClick={() => {
-         setShowSettings(false);
+         setShowSettings(false); setShowHelp(false);
          setTopModal(null);
          setActiveTab('friends');
          setFeedJump({ scope: 'friends', ts: Date.now() });
@@ -394,7 +403,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        type="button"
        className={`ff-feed-rail-btn ${activeTab === 'friends' && feedJump?.scope === 'discover' ? 'active' : ''}`}
        onClick={() => {
-         setShowSettings(false);
+         setShowSettings(false); setShowHelp(false);
          setTopModal(null);
          setActiveTab('friends');
          setFeedJump({ scope: 'discover', ts: Date.now() });
@@ -408,7 +417,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
        type="button"
        className={`ff-feed-rail-btn ${topModal === 'stories' ? 'active' : ''}`}
        onClick={() => {
-        setShowSettings(false);
+        setShowSettings(false); setShowHelp(false);
         setFeedJump(null);
         setStoryFocusUser(null);
         setTopModal('stories');
@@ -421,8 +430,14 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
 
     <main className="app-main stack">
      {showSettings && <SettingsPage user={user} onUserChange={setUser} onBack={() => setShowSettings(false)} />}
-     {!showSettings && topModal === 'dms' && <DmsModal onClose={() => setTopModal(null)} />}
-               {!showSettings && topModal === 'stories' && (
+     {showHelp && !showSettings && (
+       <HelpPage
+         onBack={() => setShowHelp(false)}
+         onOpenSettings={() => { setShowHelp(false); setShowSettings(true); }}
+       />
+     )}
+     {!showSettings && !showHelp && topModal === 'dms' && <DmsModal onClose={() => setTopModal(null)} />}
+               {!showSettings && !showHelp && topModal === 'stories' && (
        <StoriesModal
          user={user}
          focusUsername={storyFocusUser}
@@ -437,7 +452,7 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
            }
          }}
          onOpenProfile={(uname) => {
-           setShowSettings(false);
+           setShowSettings(false); setShowHelp(false);
            setTopModal(null);
            setStoryFocusUser(null);
            setActiveTab('friends');
@@ -445,14 +460,14 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
          }}
        />
      )}
-     {!showSettings && !topModal && activeTab === 'today' && <TodayTab user={user} />}
-     {!showSettings && !topModal && activeTab === 'workouts' && <WorkoutsTab />}
-     {!showSettings && !topModal && activeTab === 'body' && <BodyTab />}
+     {!showSettings && !showHelp && !topModal && activeTab === 'today' && <TodayTab user={user} onOpenHelp={() => setShowHelp(true)} />}
+     {!showSettings && !showHelp && !topModal && activeTab === 'workouts' && <WorkoutsTab />}
+     {!showSettings && !showHelp && !topModal && activeTab === 'body' && <BodyTab />}
      {!showSettings && activeTab === 'friends' && (
-       <div className={topModal ? 'hidden' : ''}>
+       <div className={topModal || showHelp ? 'hidden' : ''}>
          <FriendsTab
            user={user}
-           onOpenSettings={() => setShowSettings(true)}
+           onOpenSettings={() => { setShowHelp(false); setShowSettings(true); }}
            feedJump={feedJump}
            onOpenStories={(uname) => { setStoryFocusUser(uname || null); setTopModal('stories'); }}
          />
@@ -463,13 +478,13 @@ const visibleReqs = incomingReqs.filter((u) => !dismissedReqIds.has(u.id));
 
       <nav className="tabbar" aria-label="Main navigation">
         {TABS.map((t) => {
-          const active = !showSettings && !topModal && activeTab === t.id;
+          const active = !showSettings && !showHelp && !topModal && activeTab === t.id;
           return (
             <button
               key={t.id}
               type="button"
               className={`tab ${active ? 'active' : ''}`}
-              onClick={() => { setShowSettings(false); setTopModal(null); setActiveTab(t.id); }}
+              onClick={() => { setShowSettings(false); setShowHelp(false); setTopModal(null); setActiveTab(t.id); }}
               aria-current={active ? 'page' : undefined}
               aria-label={t.label}
             >
