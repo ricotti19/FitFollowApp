@@ -13,6 +13,8 @@ const require = createRequire(import.meta.url);
 import { moderateCaption, moderateBio, moderateComment, MESSAGES, BIO_MESSAGES } from './moderation.js';
 import { searchWgerExercises, isValidWgerExercise, inspectExercise, searchFormVideos } from './exercises.js';
 import { makeRng, postsFor } from './demoPeople.js';
+import { calcCaloriePlan, exerciseNameMatcher, isPersonalRecord, sumNutrition } from './fitnessCalc.js';
+
 
 const app = express();
 app.use(cors());
@@ -796,9 +798,8 @@ app.post('/api/steps', requireAuth, async (req, res) => {
 
 app.get('/api/nutrition', requireAuth, async (req, res) => {
   const entries = await FoodLog.find({ userId: req.user._id, day: req.query.day });
-  const totals = entries.reduce((a, b) => ({
-    calories: a.calories + (b.calories || 0), protein: a.protein + (b.protein || 0), carbs: a.carbs + (b.carbs || 0), fat: a.fat + (b.fat || 0)
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const totals = sumNutrition(entries);
+
   res.json({
     entries,
     foods: BUILTIN_FOODS,
@@ -900,20 +901,13 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   // --- calorie plan (only when the plan inputs are sent) ---
   const hasPlan = [age, heightIn, weightLb].every((v) => v !== undefined && v !== null && v !== '');
   let plan;
-  let calorieGoal;
   if (hasPlan) {
     if (![age, heightIn, weightLb].every((v) => Number.isFinite(Number(v)) && Number(v) > 0)) {
       return res.status(400).json({ error: 'Age, height and weight must be positive numbers.' });
     }
-    const bmrBase = 10 * (Number(weightLb) * 0.453592) + 6.25 * (Number(heightIn) * 2.54) - 5 * Number(age);
-    const bmr = sex === 'male' ? bmrBase + 5 : sex === 'female' ? bmrBase - 161 : bmrBase - 78;
-    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 }[activity] || 1.375;
-    const tdee = Math.round(bmr * mult);
-    const bmi = Math.round(((Number(weightLb) / (Number(heightIn) ** 2)) * 703) * 10) / 10;
-    const usedGoal = goal === 'auto' ? (bmi >= 25 ? 'lose' : bmi < 18.5 ? 'gain' : 'maintain') : goal;
-    calorieGoal = Math.max(1200, Math.min(5000, tdee + (usedGoal === 'lose' ? -400 : usedGoal === 'gain' ? 300 : 0)));
-    set.calorieGoal = calorieGoal;
-    plan = { bmi, category: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese', goalUsed: usedGoal };
+    const result = calcCaloriePlan({ age, heightIn, weightLb, sex, activity, goal });
+    plan = result.plan;
+    set.calorieGoal = result.calorieGoal;
     set.plan = { ...plan, age: Number(age), heightIn: Number(heightIn), weightLb: Number(weightLb), sex, activity, goal };
   }
 
@@ -998,8 +992,9 @@ app.post('/api/sessions', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Enter realistic weight (0–2000), reps (1–500), and sets (1–100).' });
   }
 
-  const prevBest = await WorkoutSession.findOne({ userId: req.user._id, exercise }).sort({ weight: -1 });
-  const isPR = weight > 0 && (!prevBest || weight > (prevBest.weight || 0));
+  const prevBest = await WorkoutSession.findOne({ userId: req.user._id, exercise: exerciseNameMatcher(exercise) }).sort({ weight: -1 });
+  const isPR = isPersonalRecord(prevBest, weight);
+
   const session = await WorkoutSession.create({ userId: req.user._id, exercise, activityType: mode, weight, reps, sets });
   res.status(201).json({ session, isPR });
 });
