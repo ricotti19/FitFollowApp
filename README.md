@@ -1,10 +1,20 @@
 # FitFollowApp
 (SE 3354 Group Project)
 
+## Members:
+
+Shriya Shenoj (ricotti19)
+Melissa Mejia (dal596226)
+Ethan Diep (ethan288610)
+Sakethram Vedula (sxv230145)
+Soham Kulkarni (skk210008)
+
+## Idea:
+
 FitFollow is a fitness tracking and social accountability app that brings workouts, daily steps, nutrition, and body measurements into one centralized hub.
 Unlike Instagram, which optimizes for passive scrolling and photo aesthetics, FitFollow embeds daily macro tracking, TDEE calorie planning, strength PR detection, and YouTube form coaching directly into a social accountability loop—letting users share text-only workout wins or logged PRs without needing a photo. It pairs personal tracking with a supportive community through friend search, real-time DMs, 24-hour stories, and multi-tiered audience privacy controls.
 
-## 📋 Project Structure
+## 📋 Project Structure:
 
 3-tier Client-Server architecture MERN Stack (MongoDB, Express.js, React.js, Node.js) with a dedicated Computer Vision microservice
 
@@ -71,7 +81,7 @@ FitFollowApp/
 ```
 
 ## Testing
-Testing framework : Jest
+Testing framework: Jest
 
 ## Deployment: 4-Service Distributed Cloud Architecture
   * MongoDB Atlas Cloud Database
