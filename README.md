@@ -85,7 +85,7 @@ FitFollowApp/
 ```
 
 ## Testing
-Testing framework: Jest
+Node's native testing framework
 
 ## Deployment: 4-Service Distributed Cloud Architecture
   * MongoDB Atlas Cloud Database
