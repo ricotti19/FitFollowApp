@@ -142,8 +142,14 @@ const Story = mongoose.model('Story', new mongoose.Schema({
     username: String,
     emoji: String,
   }],
-  createdAt: { type: Date, default: Date.now, expires: 86400 },
+  isSeededStory: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
 }));
+Story.collection.dropIndex('createdAt_1').catch(() => {});
+Story.collection.createIndex(
+  { createdAt: 1 },
+  { expireAfterSeconds: 86400, partialFilterExpression: { isSeededStory: { $ne: true } } }
+).catch(() => {});
 Story.collection.createIndex({ createdAt: -1 }).catch(() => {});
 
 
