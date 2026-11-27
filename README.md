@@ -4,9 +4,13 @@
 ## Members:
 
 Shriya Shenoj (ricotti19)
+
 Melissa Mejia (dal596226)
+
 Ethan Diep (ethan288610)
+
 Sakethram Vedula (sxv230145)
+
 Soham Kulkarni (skk210008)
 
 ## Idea:
