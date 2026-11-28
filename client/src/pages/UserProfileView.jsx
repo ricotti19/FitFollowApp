@@ -98,10 +98,17 @@ export default function UserProfileView({
                     Accept Request
                   </button>
                 )}
-                {state === 'FRIENDS' && (
+                                {state === 'FRIENDS' && (
+                  <button type="button" className="btn small" onClick={() => onOpenChat(pu)}>Message</button>
+                )}
+                {state === 'SELF' && onOpenSettings && (
+                  <button type="button" className="btn small ghost" onClick={onOpenSettings}>
+                    Edit Profile
+                  </button>
+                )}
+                {state !== 'SELF' && (
                   <>
-                    <button type="button" className="btn small" onClick={() => onOpenChat(pu)}>Message</button>
-                      <button
+                    <button
                       type="button"
                       className="btn small ghost"
                       style={{ color: '#b42318' }}
@@ -109,23 +116,15 @@ export default function UserProfileView({
                     >
                       Block
                     </button>
-
+                    <button
+                      type="button"
+                      className="btn small ghost"
+                      style={{ color: '#b42318' }}
+                      onClick={() => setReportModal({ userId: pu.id, username: pu.username })}
+                    >
+                      Report
+                    </button>
                   </>
-                )}
-                                {state === 'SELF' && onOpenSettings && (
-                  <button type="button" className="btn small ghost" onClick={onOpenSettings}>
-                    Edit Profile
-                  </button>
-                )}
-                {state !== 'SELF' && (
-                  <button
-                    type="button"
-                    className="btn small ghost"
-                    style={{ color: '#b42318' }}
-                    onClick={() => setReportModal({ userId: pu.id, username: pu.username })}
-                  >
-                    Report
-                  </button>
                 )}
               </div>
             </div>
