@@ -852,6 +852,7 @@ app.post('/api/nutrition/log', requireAuth, async (req, res) => {
   }
   res.json({ ok: true });
 });
+
 app.post('/api/nutrition/custom', requireAuth, async (req, res) => {
   const name = String(req.body.name || '').trim();
   const calories = Number(req.body.calories);
@@ -859,6 +860,9 @@ app.post('/api/nutrition/custom', requireAuth, async (req, res) => {
   const carbs = Number(req.body.carbs || 0);
   const fat = Number(req.body.fat || 0);
   if (!name || name.length > 80) return res.status(400).json({ error: 'Enter a valid food name.' });
+  if (!moderateComment(name).allowed) {
+    return res.status(400).json({ error: 'Please enter a clean, valid food or meal name.' });
+  }
   if (!Number.isFinite(calories) || calories <= 0 || calories > 5000) {
     return res.status(400).json({ error: 'Calories must be between 1 and 5,000 kcal.' });
   }
