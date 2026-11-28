@@ -3,6 +3,7 @@ import { api, photoUrl } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { timeAgo } from '../lib/format';
 import Avatar from './Avatar';
+import { ReportDialog } from '../pages/FriendsDialogs';
 
 function StoryPhoto({ path }) {
   const [src, setSrc] = useState(null);
@@ -53,6 +54,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
   }, [visibleCount, feedStories.length]);
   const [openViewersId, setOpenViewersId] = useState(null);
   const [confirmDeleteStoryId, setConfirmDeleteStoryId] = useState(null);
+  const [reportingStory, setReportingStory] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replyStatus, setReplyStatus] = useState({});
   const [text, setText] = useState('');
@@ -277,7 +279,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Friends &amp; Public Stories ({feedStories.length})</h3>
             )}
             
-                        {(focusUsername
+              {(focusUsername
               ? (focusUsername === user?.username ? stories.map((s) => ({ ...s, mine: true, author: user })) : feedStories.filter((s) => s.author?.username === focusUsername))
               : feedStories)
               .slice(0, visibleCount)
@@ -318,7 +320,7 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                       <div className="handle">@{st.author?.username} • {st.createdAt ? timeAgo(st.createdAt) : 'Active'}</div>
                     </div>
                   </div>
-                                    {st.mine ? (
+                                                                        {st.mine ? (
                     <button
                       type="button"
                       className="btn small dark-navy"
@@ -330,8 +332,22 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
                       Delete
                     </button>
                   ) : (
-                    <span className={`chip ${st.viewedByMe ? '' : 'accent'}`}>{st.viewedByMe ? 'Viewed' : 'New'}</span>
+                    <div className="row" style={{ gap: 6 }}>
+                      <button
+                        type="button"
+                        className="btn small"
+                        style={{ background: '#fee2e2', color: '#b42318', border: '1px solid #fca5a5', fontWeight: 700 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReportingStory(st);
+                        }}
+                      >
+                        🚩 Report
+                      </button>
+                      <span className={`chip ${st.viewedByMe ? '' : 'accent'}`}>{st.viewedByMe ? 'Viewed' : 'New'}</span>
+                    </div>
                   )}
+
                 </div>            
               {st.text && <div style={{ padding: '0 16px 14px', fontSize: '1.1rem', fontWeight: 600 }}>{st.text}</div>}
                 {st.photoUrl && <StoryPhoto path={st.photoUrl} />}
@@ -464,7 +480,23 @@ export default function StoriesModal({ user, focusUsername = null, onClearFocus,
               </button>
             </div>
           </div>
-        </div>
+        </div>    
+      )}
+
+      {reportingStory && (
+        <ReportDialog
+          target={{
+            userId: reportingStory.author?.id,
+            username: `${reportingStory.author?.username || 'user'} (story: "${(reportingStory.text || 'photo story').slice(0, 60)}")`,
+          }}
+          onClose={() => setReportingStory(null)}
+          onReported={() => {
+            const reportedId = reportingStory.id;
+            setReportingStory(null);
+            setFeedStories((prev) => prev.filter((x) => x.id !== reportedId));
+            setMsg('Story reported and sent to the Moderator Queue.');
+          }}
+        />
       )}
     </div>
   );
