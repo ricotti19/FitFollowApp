@@ -182,13 +182,23 @@ export default function UserProfileView({
                     <div className="name">{pu.displayName}</div>
                     <div className="handle">@{pu.username} • {AUDIENCE_LABEL[post.audience] || post.audience}{post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ''}</div>
                   </div>
-                   {state === 'SELF' && (
+                  
+                    {state === 'SELF' ? (
                     <button
                       type="button"
                       className="btn small dark-navy"
                       onClick={() => setConfirmDeletePostId(post._id)}
                     >
                       Delete
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn small"
+                      style={{ background: '#fee2e2', color: '#b42318', border: '1px solid #fca5a5', fontWeight: 700 }}
+                      onClick={() => setReportModal({ userId: pu.id, username: pu.username })}
+                    >
+                      🚩 Report
                     </button>
                   )}
 
