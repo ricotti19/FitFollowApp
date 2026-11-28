@@ -1175,20 +1175,22 @@ app.get('/api/friends/search', requireAuth, async (req, res) => {
   const q = String(req.query.q || '').trim().replace(/^@/, '');
   const mode = req.query.mode === 'quirk' ? 'quirk' : 'name';
   if (q.length < 2) return res.json({ users: [] });
-  const me = req.user._id;
+    const me = req.user._id;
+  const meDoc = await User.findById(me, 'blockedUsers').lean();
+  const blockedIds = [me, ...(meDoc?.blockedUsers || [])];
   const rx = new RegExp(escapeRegExp(q), 'i');
   const lower = q.toLowerCase();
 
   let found = [];
   if (mode === 'quirk') {
     const bioHits = await User.find(
-      { _id: { $ne: me }, blockedUsers: { $ne: me }, isPublic: true, bio: rx },
+      { _id: { $nin: blockedIds }, blockedUsers: { $ne: me }, isPublic: true, bio: rx },
       'username displayName avatarUrl bio isPublic allowStatsIndexing'
     ).limit(20).lean();
     if (bioHits.length >= 20) {
       found = bioHits;
     } else {
-      const excludeIds = [me, ...bioHits.map((u) => u._id)];
+      const excludeIds = [...blockedIds, ...bioHits.map((u) => u._id)];
       const candidates = await User.find(
         { _id: { $nin: excludeIds }, blockedUsers: { $ne: me }, allowStatsIndexing: true },
         'username displayName avatarUrl bio isPublic allowStatsIndexing'
@@ -1200,8 +1202,7 @@ app.get('/api/friends/search', requireAuth, async (req, res) => {
   } else {
 
     const rank = (u) => ((u.username || '').toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
-    found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me }, blockedUsers: { $ne: me } }, 'username displayName avatarUrl bio isPublic allowStatsIndexing').limit(100).lean())
-
+    found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $nin: blockedIds }, blockedUsers: { $ne: me } }, 'username displayName avatarUrl bio isPublic allowStatsIndexing').limit(100).lean())
 
   .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
       .slice(0, 20);
