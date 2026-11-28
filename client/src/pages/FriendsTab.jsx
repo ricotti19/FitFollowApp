@@ -74,13 +74,18 @@ function PostCard({ post: p, onDelete, onReportPost, onCommentAdded, onCommentDe
             <div className="handle">@{p.author?.username || 'user'} • {AUDIENCE_LABEL[p.audience] || p.audience}{p.createdAt ? ` • ${timeAgo(p.createdAt)}` : ''}</div>
           </div>
         </div>
-          {p.mine ? (
+        {p.mine ? (
           <button type="button" className="btn small dark-navy" onClick={() => onDelete(p._id)}>
             Delete
           </button>
         ) : (
-          <button type="button" className="btn small ghost" style={{ color: '#b42318' }} onClick={() => onReportPost(p)}>
-            Report
+          <button
+            type="button"
+            className="btn small"
+            style={{ background: '#fee2e2', color: '#b42318', border: '1px solid #fca5a5', fontWeight: 700 }}
+            onClick={() => onReportPost(p)}
+          >
+            🚩 Report
           </button>
         )}
       </div>
