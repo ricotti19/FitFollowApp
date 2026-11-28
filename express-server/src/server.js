@@ -780,9 +780,17 @@ app.delete('/api/me', requireAuth, async (req, res) => {
 
 // Today (Steps & Nutrition)
 app.get('/api/steps', requireAuth, async (req, res) => {
-  const doc = await StepLog.findOne({ userId: req.user._id, day: req.query.day });
-  res.json({ steps: doc?.steps || 0, goal: 10000 });
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    days.push(new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+  }
+  const logs = await StepLog.find({ userId: req.user._id, day: { $in: days } }).lean();
+  const byDay = new Map(logs.map((l) => [l.day, l.steps || 0]));
+  const history = days.map((d) => ({ day: d, steps: byDay.get(d) || 0 }));
+  const todaySteps = byDay.get(req.query.day) ?? history.at(-1)?.steps ?? 0;
+  res.json({ steps: todaySteps, goal: 10000, history });
 });
+
 app.post('/api/steps', requireAuth, async (req, res) => {
   const steps = Number(req.body.steps);
   if (!Number.isFinite(steps) || steps <= 0 || steps > 100000) {
