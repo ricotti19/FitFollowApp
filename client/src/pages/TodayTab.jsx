@@ -306,7 +306,7 @@ export default function TodayTab() {
                 <span className="small" style={{ fontWeight: 700 }}>Last 7 Days Trend</span>
                 <span className="small muted">Avg: {fmtNum(avg)}/day · {daysHit}/7 goals hit</span>
               </div>
-              <svg viewBox="0 0 300 72" style={{ width: '100%', height: 72, overflow: 'visible' }} aria-label="7-day step trend chart">
+              <svg viewBox="0 0 300 72" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: 72, overflow: 'visible' }} aria-label="7-day step trend chart">
                 <line x1="10" y1={62 - (stepGoal / maxVal) * 52} x2="290" y2={62 - (stepGoal / maxVal) * 52} stroke="rgba(16,21,68,0.18)" strokeDasharray="4 4" strokeWidth="1.2" />
                 <polyline fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pts} />
                 {stepHistory.map((h, i) => {
