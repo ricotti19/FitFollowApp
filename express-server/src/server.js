@@ -1775,7 +1775,7 @@ app.get('/api/stories/feed', requireAuth, async (req, res) => {
   });
 
   res.json({
-    stories: rows.map((s) => {
+    stories: visibleRows.map((s) => {
       const a = byId.get(String(s.authorId));
       const mine = String(s.authorId) === String(me);
       return {
