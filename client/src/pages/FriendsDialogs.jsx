@@ -98,7 +98,8 @@ export function ChatDialog({ friend, onClose }) {
   const [messages, setMessages] = useState([]);
   const [msgText, setMsgText] = useState('');
   const [msgErr, setMsgErr] = useState('');
-
+  const [reportingMsg, setReportingMsg] = useState(null);
+  const [reportNotice, setReportNotice] = useState('');
   useEffect(() => {
     let cancelled = false;
     const loadChat = () =>
@@ -149,22 +150,51 @@ export function ChatDialog({ friend, onClose }) {
         }}
       >
         {messages.length === 0 && <p className="small muted" style={{ margin: 'auto' }}>No messages yet. Say hi!</p>}
-        {messages.map((m) => (
+                {messages.map((m) => (
           <div
             key={m.id}
             style={{
               alignSelf: m.mine ? 'flex-end' : 'flex-start',
-              background: m.mine ? '#e14b63' : '#ffffff',
-              color: m.mine ? '#ffffff' : '#14141f',
-              padding: '10px 16px', borderRadius: 999, maxWidth: '75%',
-              fontSize: '0.95rem', fontWeight: 500,
-              boxShadow: m.mine ? '0 4px 12px rgba(225, 75, 99, 0.25)' : '0 2px 8px rgba(20, 20, 31, 0.06)',
+              display: 'flex', alignItems: 'center', gap: 6, maxWidth: '80%',
             }}
           >
-            {m.text}
+            <div
+              style={{
+                background: m.mine ? '#e14b63' : '#ffffff',
+                color: m.mine ? '#ffffff' : '#14141f',
+                padding: '10px 16px', borderRadius: 999,
+                fontSize: '0.95rem', fontWeight: 500,
+                boxShadow: m.mine ? '0 4px 12px rgba(225, 75, 99, 0.25)' : '0 2px 8px rgba(20, 20, 31, 0.06)',
+              }}
+            >
+              {m.text}
+            </div>
+            {!m.mine && (
+              <button
+                type="button"
+                className="btn small ghost"
+                title="Report this message"
+                style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#b42318', flexShrink: 0 }}
+                onClick={() => setReportingMsg(m)}
+              >
+                🚩 Report
+              </button>
+            )}
           </div>
         ))}
       </div>
+
+      {reportNotice && <div className="notice ok" style={{ marginBottom: 10 }}>{reportNotice}</div>}
+      {reportingMsg && (
+        <ReportDialog
+          target={{ userId: friend.id, username: `${friend.username} (message: "${reportingMsg.text.slice(0, 60)}")` }}
+          onClose={() => setReportingMsg(null)}
+          onReported={() => {
+            setReportingMsg(null);
+            setReportNotice(`Reported message from @${friend.username} to the Moderator Queue.`);
+          }}
+        />
+      )}
 
       {msgErr && <p className="small" style={{ color: '#b42318', marginBottom: 10 }}>{msgErr}</p>}
       <form onSubmit={sendDm} className="row" style={{ gap: 10 }}>
