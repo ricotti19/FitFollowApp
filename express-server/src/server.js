@@ -780,9 +780,12 @@ app.delete('/api/me', requireAuth, async (req, res) => {
 
 // Today (Steps & Nutrition)
 app.get('/api/steps', requireAuth, async (req, res) => {
+  const baseMs = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.day || ''))
+    ? Date.parse(`${req.query.day}T12:00:00Z`)
+    : Date.now();
   const days = [];
   for (let i = 6; i >= 0; i--) {
-    days.push(new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+    days.push(new Date(baseMs - i * 86400000).toISOString().slice(0, 10));
   }
   const logs = await StepLog.find({ userId: req.user._id, day: { $in: days } }).lean();
   const byDay = new Map(logs.map((l) => [l.day, l.steps || 0]));
