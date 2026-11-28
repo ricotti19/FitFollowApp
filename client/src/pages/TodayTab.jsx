@@ -161,6 +161,7 @@ export default function TodayTab() {
   const day = localDay();
   const [steps, setSteps] = useState(0);
   const [stepGoal, setStepGoal] = useState(10000);
+  const [stepHistory, setStepHistory] = useState([]);
   const [stepInput, setStepInput] = useState('');
   const [stepErr, setStepErr] = useState('');
   const [nutrition, setNutrition] = useState({ entries: [], foods: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 }, goal: 2200, goalSource: 'default', plan: null, profile: null });
@@ -181,6 +182,7 @@ export default function TodayTab() {
       const [sRes, nRes] = await Promise.all([api.get(`/steps?day=${day}`), api.get(`/nutrition?day=${day}`)]);
       setSteps(sRes.steps ?? sRes.total ?? 0);
       if (sRes.goal) setStepGoal(sRes.goal);
+      if (Array.isArray(sRes.history)) setStepHistory(sRes.history);
       setNutrition((prev) => ({ ...prev, ...nRes }));
     } catch (e) {
       console.error(e);
@@ -292,7 +294,38 @@ export default function TodayTab() {
         <div className="track" aria-hidden="true">
           <i style={{ width: `${stepsPct}%` }} />
         </div>
-        <div className="small muted">{stepsPct}% of daily goal</div>
+                <div className="small muted">{stepsPct}% of daily goal</div>
+        {stepHistory.length > 0 && (() => {
+          const maxVal = Math.max(stepGoal, ...stepHistory.map((h) => h.steps), 1);
+          const avg = Math.round(stepHistory.reduce((s, h) => s + h.steps, 0) / stepHistory.length);
+          const daysHit = stepHistory.filter((h) => h.steps >= stepGoal).length;
+          const pts = stepHistory.map((h, i) => `${(i / Math.max(stepHistory.length - 1, 1)) * 280 + 10},${62 - (h.steps / maxVal) * 52}`).join(' ');
+          return (
+            <div style={{ marginTop: 4, padding: '12px 14px', borderRadius: 14, background: 'rgba(247, 244, 255, 0.85)', border: '1px solid var(--line)' }}>
+              <div className="row spread" style={{ marginBottom: 6 }}>
+                <span className="small" style={{ fontWeight: 700 }}>Last 7 Days Trend</span>
+                <span className="small muted">Avg: {fmtNum(avg)}/day · {daysHit}/7 goals hit</span>
+              </div>
+              <svg viewBox="0 0 300 72" style={{ width: '100%', height: 72, overflow: 'visible' }} aria-label="7-day step trend chart">
+                <line x1="10" y1={62 - (stepGoal / maxVal) * 52} x2="290" y2={62 - (stepGoal / maxVal) * 52} stroke="rgba(16,21,68,0.18)" strokeDasharray="4 4" strokeWidth="1.2" />
+                <polyline fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pts} />
+                {stepHistory.map((h, i) => {
+                  const cx = (i / Math.max(stepHistory.length - 1, 1)) * 280 + 10;
+                  const cy = 62 - (h.steps / maxVal) * 52;
+                  return <circle key={h.day} cx={cx} cy={cy} r="4" fill={h.steps >= stepGoal ? '#10b981' : 'var(--accent)'} />;
+                })}
+              </svg>
+              <div className="row spread" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2 }}>
+                {stepHistory.map((h) => <span key={h.day}>{h.day.slice(5)}</span>)}
+              </div>
+              <div className="small" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#fff', fontWeight: 600 }}>
+                💡 {avg >= stepGoal
+                  ? `Strong consistency! You averaged ${fmtNum(avg)} steps/day this week.`
+                  : `Where to improve: You averaged ${fmtNum(avg)} steps/day (${fmtNum(stepGoal - avg)} below goal) — try adding one 15-min walk (~1,500 steps) daily.`}
+              </div>
+            </div>
+          );
+        })()}
         <form onSubmit={addSteps} className="stack" style={{ gap: 6 }} noValidate>
           <div className="row">
             <input
