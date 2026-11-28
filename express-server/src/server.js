@@ -1662,19 +1662,29 @@ app.get('/api/users/:username/profile', requireAuth, async (req, res) => {
     }));
 
     if (posts.length === 0 && !isSelf && target.isPublic) {
+      const MALE_FIRST = new Set([
+        'Liam', 'Noah', 'Ethan', 'Mason', 'Lucas', 'Logan', 'Caleb', 'Nathan', 'Ryan', 'Dylan',
+        'Aiden', 'Jack', 'Owen', 'Gabriel', 'Carter', 'Julian', 'Mateo', 'Leo', 'Isaac', 'Daniel',
+        'Henry', 'Miles', 'Gavin', 'Evan', 'Lukas', 'Soren', 'Matteo', 'Sebastian', 'Henrik', 'Nico',
+        'Kenji', 'Hiroshi', 'Minho', 'Jihoon', 'Wei', 'Jun', 'Bao', 'Minh', 'Haruto', 'Ren',
+        'Kaito', 'Seojun', 'Doyoon', 'Hao', 'Zhi', 'Tuan', 'Riku', 'Hyun', 'Cheng', 'Daiki',
+        'Arjun', 'Rohan', 'Dev', 'Samir', 'Kabir', 'Aarav', 'Vikram', 'Nikhil', 'Siddharth', 'Karan',
+        'Kwame', 'Kofi', 'Tariq', 'Malik', 'Idris', 'Chidi', 'Tunde', 'Zuri', 'Jelani', 'Jabari',
+      ]);
       if (!cachedPulsePools) {
         const [demoAuthors, manPool, womanPool] = await Promise.all([
           User.find({ isDemo: true, isPublic: true }, '_id username displayName isPublic').limit(80).lean(),
-          Post.find({ isSeededPhoto: true, gender: 'man' }, '_id text').limit(127).lean(),
-          Post.find({ isSeededPhoto: true, gender: 'woman' }, '_id text').limit(127).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'man' }, '_id photo text').limit(127).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'woman' }, '_id photo text').limit(127).lean(),
         ]);
         cachedPulsePools = { demoAuthors, manPool, womanPool };
       }
+      const isMan = MALE_FIRST.has((target.displayName || '').split(' ')[0]);
+      const genderPool = isMan ? (cachedPulsePools.manPool || []) : (cachedPulsePools.womanPool || []);
       const rng = makeRng(`profile-${target.username}`);
       const samples = postsFor({ username: target.username, isPublic: true }, rng, Date.now(), cachedPulsePools.demoAuthors || []).slice(0, 4);
-      const allPhotos = [...(cachedPulsePools.manPool || []), ...(cachedPulsePools.womanPool || [])];
       posts = samples.map((s, idx) => {
-        const picked = allPhotos.length && idx % 2 === 0 ? allPhotos[Math.floor(rng() * allPhotos.length)] : null;
+      const picked = genderPool.length && idx % 2 === 0 ? genderPool[Math.floor(rng() * genderPool.length)] : null;
         return {
           _id: `demo-${target._id}-${idx}`,
           author: { username: target.username },
