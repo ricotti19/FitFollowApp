@@ -5,7 +5,7 @@ import Avatar from '../components/Avatar';
 import PostComposer from './PostComposer';
 import FriendsPanel, { StoryAvatar } from './FriendsPanel';
 import UserProfileView from './UserProfileView';
-import { ConfirmDialog, ChatDialog } from './FriendsDialogs';
+import { ConfirmDialog, ChatDialog, ReportDialog } from './FriendsDialogs';
 
 // Photos sit behind the privacy filter, so <img src> can't send our token: fetch as a blob (see lib/api.js).
 function PostPhoto({ path }) {
@@ -330,19 +330,10 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
             key={p._id}
             post={p}
             onDelete={handleDeletePost}
-            onReportPost={(post) => setConfirmModal({
-              title: `Report @${post.author?.username || 'user'}'s post?`,
-              body: 'This post will be hidden from your feed and sent to the Moderator Queue.',
-              confirmLabel: 'Report Post',
-              onConfirm: async () => {
-                await api.post('/reports', {
-                  targetUserId: post.author?._id || post.author?.id || post._id,
-                  targetUsername: post.author?.username || 'user',
-                  reason: `Reported post (${post._id}): ${(post.text || 'photo post').slice(0, 120)}`,
-                }).catch(() => {});
-                setFeed((prev) => prev.filter((x) => x._id !== post._id));
-                setExternalFriendMsg(`Reported post by @${post.author?.username || 'user'} to the Moderator Queue.`);
-              },
+              onReportPost={(post) => setReportModal({
+              userId: post.author?._id || post.author?.id || post._id,
+              username: post.author?.username || 'user',
+              postId: post._id,
             })}
             onOpenProfile={openProfile}
             onCommentAdded={(id, c) => patchPost(id, (post) => ({ ...post, comments: [...(post.comments || []), c] }))}
@@ -363,7 +354,19 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
           onCancel={() => setConfirmModal(null)}
         />
       )}
+      
       {activeChat && <ChatDialog friend={activeChat} onClose={() => setActiveChat(null)} />}
+      {reportModal && (
+        <ReportDialog
+          target={reportModal}
+          onClose={() => setReportModal(null)}
+          onReported={(t) => {
+            setReportModal(null);
+            if (t.postId) setFeed((prev) => prev.filter((x) => x._id !== t.postId));
+            setExternalFriendMsg(`Reported @${t.username}'s post to the Moderator Queue.`);
+          }}
+        />
+      )}
 
       {showBackToTop && (
         <button
