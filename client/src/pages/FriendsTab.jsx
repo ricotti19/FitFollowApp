@@ -31,7 +31,7 @@ function PostPhoto({ path }) {
 }
 
 // One feed post with its comment thread. Comment drafts/errors are local to the card
-function PostCard({ post: p, onDelete, onCommentAdded, onCommentDeleted, onOpenProfile }) {
+function PostCard({ post: p, onDelete, onReportPost, onCommentAdded, onCommentDeleted, onOpenProfile }) {
   const [draft, setDraft] = useState('');
   const [err, setErr] = useState('');
 
@@ -74,9 +74,13 @@ function PostCard({ post: p, onDelete, onCommentAdded, onCommentDeleted, onOpenP
             <div className="handle">@{p.author?.username || 'user'} • {AUDIENCE_LABEL[p.audience] || p.audience}{p.createdAt ? ` • ${timeAgo(p.createdAt)}` : ''}</div>
           </div>
         </div>
-        {p.mine && (
+          {p.mine ? (
           <button type="button" className="btn small dark-navy" onClick={() => onDelete(p._id)}>
             Delete
+          </button>
+        ) : (
+          <button type="button" className="btn small ghost" style={{ color: '#b42318' }} onClick={() => onReportPost(p)}>
+            Report
           </button>
         )}
       </div>
@@ -321,11 +325,25 @@ export default function FriendsTab({ user, onOpenSettings, feedJump, onOpenStori
               ? 'Nothing here yet. Share a post, add friends above, or browse Discover.'
               : 'No public posts to discover yet.'}
           </div>
-        ) : feed.map((p) => (
+                  ) : feed.map((p) => (
           <PostCard
             key={p._id}
             post={p}
             onDelete={handleDeletePost}
+            onReportPost={(post) => setConfirmModal({
+              title: `Report @${post.author?.username || 'user'}'s post?`,
+              body: 'This post will be hidden from your feed and sent to the Moderator Queue.',
+              confirmLabel: 'Report Post',
+              onConfirm: async () => {
+                await api.post('/reports', {
+                  targetUserId: post.author?._id || post.author?.id || post._id,
+                  targetUsername: post.author?.username || 'user',
+                  reason: `Reported post (${post._id}): ${(post.text || 'photo post').slice(0, 120)}`,
+                }).catch(() => {});
+                setFeed((prev) => prev.filter((x) => x._id !== post._id));
+                setExternalFriendMsg(`Reported post by @${post.author?.username || 'user'} to the Moderator Queue.`);
+              },
+            })}
             onOpenProfile={openProfile}
             onCommentAdded={(id, c) => patchPost(id, (post) => ({ ...post, comments: [...(post.comments || []), c] }))}
             onCommentDeleted={(id, cid) => patchPost(id, (post) => ({ ...post, comments: (post.comments || []).filter((c) => c._id !== cid) }))}
