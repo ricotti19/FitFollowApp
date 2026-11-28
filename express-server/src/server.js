@@ -51,10 +51,11 @@ const User = mongoose.model('User', new mongoose.Schema({
   role: { type: String, default: 'user' },
   isPublic: { type: Boolean, default: false },
   defaultAudience: { type: String, enum: AUDIENCES, default: 'FRIENDS' },
-  avatarUrl: String,
+  avatarUrl: String,  
   isDemo: { type: Boolean, default: false },
   allowStatsIndexing: { type: Boolean, default: false },
   dismissedSuggestions: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
+  blockedUsers: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }));
 
 const StepLog = mongoose.model('StepLog', new mongoose.Schema({
@@ -739,9 +740,15 @@ app.patch('/api/me', requireAuth, async (req, res) => {
     set.defaultAudience = 'FRIENDS';
   }
 
-  const u = await User.findByIdAndUpdate(req.user._id, { $set: set }, { new: true, projection: PROFILE_FIELDS }).lean();
-  if (set.isPublic !== undefined) await Post.updateMany({ authorId: req.user._id }, { authorPublic: set.isPublic });
+    const u = await User.findByIdAndUpdate(req.user._id, { $set: set }, { new: true, projection: PROFILE_FIELDS }).lean();
+  if (set.isPublic !== undefined) {
+    await Post.updateMany({ authorId: req.user._id }, { authorPublic: set.isPublic });
+    if (set.isPublic === false) {
+      await Story.updateMany({ authorId: req.user._id, audience: 'PUBLIC' }, { $set: { audience: 'FRIENDS' } });
+    }
+  }
   res.json({ user: toPublicUser(u) });
+
 });
 
 app.post('/api/me/password', requireAuth, async (req, res) => {
@@ -1175,7 +1182,7 @@ app.get('/api/friends/search', requireAuth, async (req, res) => {
   let found = [];
   if (mode === 'quirk') {
     const bioHits = await User.find(
-      { _id: { $ne: me }, isPublic: true, bio: rx },
+      { _id: { $ne: me }, blockedUsers: { $ne: me }, isPublic: true, bio: rx },
       'username displayName avatarUrl bio isPublic allowStatsIndexing'
     ).limit(20).lean();
     if (bioHits.length >= 20) {
@@ -1183,7 +1190,7 @@ app.get('/api/friends/search', requireAuth, async (req, res) => {
     } else {
       const excludeIds = [me, ...bioHits.map((u) => u._id)];
       const candidates = await User.find(
-        { _id: { $nin: excludeIds }, allowStatsIndexing: true },
+        { _id: { $nin: excludeIds }, blockedUsers: { $ne: me }, allowStatsIndexing: true },
         'username displayName avatarUrl bio isPublic allowStatsIndexing'
       ).limit(150).lean();
       const candQuirks = await computeFitnessQuirks(candidates);
@@ -1193,8 +1200,10 @@ app.get('/api/friends/search', requireAuth, async (req, res) => {
   } else {
 
     const rank = (u) => ((u.username || '').toLowerCase().startsWith(lower) ? 0 : (u.displayName || '').toLowerCase().startsWith(lower) ? 1 : 2);
-    found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me } }, 'username displayName avatarUrl bio isPublic allowStatsIndexing').limit(100).lean())
-      .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
+    found = (await User.find({ $or: [{ username: rx }, { displayName: rx }], _id: { $ne: me }, blockedUsers: { $ne: me } }, 'username displayName avatarUrl bio isPublic allowStatsIndexing').limit(100).lean())
+
+
+  .sort((x, y) => rank(x) - rank(y) || (x.username || '').localeCompare(y.username || ''))
       .slice(0, 20);
   }
 
@@ -1223,8 +1232,12 @@ app.post('/api/friends/:id/send', requireAuth, async (req, res) => {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: 'User not found.' });
   if (String(id) === String(me)) return res.status(400).json({ error: "You can't add yourself." });
-  const other = await User.findById(id, 'isDemo').lean();
+  
+  const other = await User.findById(id, 'isDemo blockedUsers').lean();
   if (!other) return res.status(404).json({ error: 'User not found.' });
+  if ((other.blockedUsers || []).some((b) => String(b) === String(me))) {
+    return res.status(403).json({ error: 'Unable to send friend request.' });
+  }
 
   const key = pairKey(me, id);
   let f = await Friendship.findOneAndUpdate(
@@ -1341,6 +1354,7 @@ app.post('/api/friends/:id/block', requireAuth, async (req, res) => {
   await Promise.all([
     Friendship.deleteOne({ pairKey: key }),
     Message.deleteMany({ pairKey: key }),
+    User.findByIdAndUpdate(req.user._id, { $addToSet: { blockedUsers: id } }),
   ]);
   res.json({ ok: true, blocked: true });
 });
@@ -1736,6 +1750,7 @@ app.get('/api/stories/mine', requireAuth, async (req, res) => {
 app.get('/api/stories/feed', requireAuth, async (req, res) => {
   const me = req.user._id;
   const fIds = await friendIdsOf(me);
+  
   const rows = await Story.find(
     {
       $or: [
@@ -1752,6 +1767,12 @@ app.get('/api/stories/feed', requireAuth, async (req, res) => {
     ? await User.find({ _id: { $in: authorIds } }, 'username displayName avatarUrl isPublic').lean()
     : [];
   const byId = new Map(authors.map((a) => [String(a._id), a]));
+  const friendSet = new Set(fIds.map(String));
+  const visibleRows = rows.filter((s) => {
+    const aid = String(s.authorId);
+    if (aid === String(me) || friendSet.has(aid)) return true;
+    return s.audience === 'PUBLIC' && Boolean(byId.get(aid)?.isPublic);
+  });
 
   res.json({
     stories: rows.map((s) => {
