@@ -1646,9 +1646,9 @@ app.get('/api/users/:username/profile', requireAuth, async (req, res) => {
   const canView = isSelf || Boolean(target.isPublic) || state === 'FRIENDS';
   const quirks = await computeFitnessQuirks([target]);
 
-  let posts = [];
-  
-    if (canView) {
+    let posts = [];
+
+  if (canView) {
     const allowedAudiences = isSelf ? ['PRIVATE', 'FRIENDS', 'PUBLIC'] : state === 'FRIENDS' ? ['FRIENDS', 'PUBLIC'] : ['PUBLIC'];
     const raw = await Post.find(
       { authorId: target._id, audience: { $in: allowedAudiences }, ...(isSelf ? {} : { photoStatus: { $in: ['none', 'approved'] } }) },
@@ -1660,6 +1660,34 @@ app.get('/api/users/:username/profile', requireAuth, async (req, res) => {
       photoUrl: p.photoStatus !== 'none' ? `/api/feed/${p._id}/photo` : null,
       comments: (p.comments || []).map((c) => ({ ...c, mine: String(c.authorId) === String(me) })),
     }));
+
+    if (posts.length === 0 && !isSelf && target.isPublic) {
+      if (!cachedPulsePools) {
+        const [demoAuthors, manPool, womanPool] = await Promise.all([
+          User.find({ isDemo: true, isPublic: true }, '_id username displayName isPublic').limit(80).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'man' }, '_id text').limit(127).lean(),
+          Post.find({ isSeededPhoto: true, gender: 'woman' }, '_id text').limit(127).lean(),
+        ]);
+        cachedPulsePools = { demoAuthors, manPool, womanPool };
+      }
+      const rng = makeRng(`profile-${target.username}`);
+      const samples = postsFor({ username: target.username, isPublic: true }, rng, Date.now(), cachedPulsePools.demoAuthors || []).slice(0, 4);
+      const allPhotos = [...(cachedPulsePools.manPool || []), ...(cachedPulsePools.womanPool || [])];
+      posts = samples.map((s, idx) => {
+        const picked = allPhotos.length && idx % 2 === 0 ? allPhotos[Math.floor(rng() * allPhotos.length)] : null;
+        return {
+          _id: `demo-${target._id}-${idx}`,
+          author: { username: target.username },
+          audience: 'PUBLIC',
+          text: picked?.text || s.text,
+          photoStatus: picked ? 'approved' : 'none',
+          hasPhoto: Boolean(picked),
+          photoUrl: picked ? `/api/feed/${picked._id}/photo` : null,
+          comments: [],
+          createdAt: new Date(Date.now() - (idx + 1) * 3600000 * 6),
+        };
+      });
+    }
   }
 
   res.json({
